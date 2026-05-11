@@ -30,17 +30,19 @@ final class AIAnalysisService: PoseAnalysisService {
 
     private func buildRequest(angles: PoseAngle) -> DeepSeekRequest {
         let prompt = """
-        你是一位专业的体态评估师。根据以下检测数据，给出体态分析报告。只分析有数据支撑的问题，数据正常项可简要提及。
+        你是一位专业的体态评估师。根据以下正面照检测数据（基于身体中轴线的相对测量），给出体态分析报告。只分析有数据支撑的问题，数据正常项可简要提及。
 
         检测数据：
-        - 头前伸角度：\(formatAngle(angles.headForward))（正常 ≤5°，轻度 5-10°，明显 >10°）
-        - 高低肩差：\(formatDiff(angles.shoulderDiff))（归一化值，正常 ≤0.01，轻度 0.01-0.02，明显 >0.02）
-        - 圆肩角度：\(formatAngle(angles.roundShoulder))（正常 ≤10°，轻度 10-15°，明显 >15°）
-        - 骨盆前倾角度：\(formatAngle(angles.pelvicTilt))（正常 ≤10°，轻度 10-15°，明显 >15°）
-        - 腿型偏移：\(formatDiff(angles.legAlignment))（归一化值，正常 ≤0.02，轻度 0.02-0.03，明显 >0.03）
+        - 头部侧倾角：\(formatAngle(angles.headForward))（两耳连线与水平的夹角，正常 ≤3°，轻度 3-7°，明显 >7°）
+        - 高低肩差：\(formatPixel(angles.shoulderDiff))（两肩沿身体垂直方向的高度差，正常 ≤30px，轻度 30-60px，明显 >60px）
+        - 肩部倾斜角：\(formatAngle(angles.roundShoulder))（两肩连线与水平的夹角，正常 ≤3°，轻度 3-7°，明显 >7°）
+        - 骨盆倾斜角：\(formatAngle(angles.pelvicTilt))（两髋连线与水平的夹角，正常 ≤3°，轻度 3-7°，明显 >7°）
+        - 腿型偏移：\(formatPixel(angles.legAlignment))（膝偏离髋踝连线的距离，正常 ≤25px，轻度 25-45px，明显 >45px）
+
+        注意：以上数据来自正面照，无法评估侧面体态问题（如头前伸、圆肩、骨盆前倾）。请仅根据正面可观测的指标给出分析。
 
         请返回严格 JSON（不要 markdown 代码块标记），issues 只包含异常项：
-        {"issues":[{"name":"圆肩","severity":"moderate","description":"肩关节前旋明显...","score":65}],"overall_score":72,"summary":"一句话总结"}
+        {"issues":[{"name":"高低肩","severity":"moderate","description":"右肩明显高于左肩...","score":65}],"overall_score":72,"summary":"一句话总结"}
         """
 
         return DeepSeekRequest(
@@ -59,6 +61,10 @@ final class AIAnalysisService: PoseAnalysisService {
 
     private func formatDiff(_ value: Float?) -> String {
         value.map { String(format: "%.3f", $0) } ?? "无数据"
+    }
+
+    private func formatPixel(_ value: Float?) -> String {
+        value.map { String(format: "%.0f px", $0) } ?? "无数据"
     }
 
     private func stripMarkdownCodeBlock(_ text: String) -> String {
