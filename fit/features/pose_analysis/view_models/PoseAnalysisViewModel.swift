@@ -43,12 +43,9 @@ final class PoseAnalysisViewModel: ObservableObject {
             }
 
             let cgSize = image.cgImage.map { CGSize(width: $0.width, height: $0.height) } ?? image.size
-            angles = AngleCalculator.compute(points, cgImageSize: cgSize)
-            if let angles {
-                annotatedImage = SkeletonRenderer.render(image: image, points: points, angles: angles, cgImageSize: cgSize)
-            } else {
-                annotatedImage = SkeletonRenderer.render(image: image, points: points)
-            }
+            let result = AngleCalculator.compute(points, cgImageSize: cgSize)
+            angles = result.angle
+            annotatedImage = SkeletonRenderer.render(image: image, points: points)
 
             phase = .analyzing
             if let angles {

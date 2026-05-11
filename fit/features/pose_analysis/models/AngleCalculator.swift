@@ -1,9 +1,16 @@
 import Foundation
 
+enum ViewAngle: String {
+    case front  // 正面/背面
+    case side   // 侧面
+}
+
 enum AngleCalculator {
     private enum Joint: String {
         case leftEar = "left_ear_joint"
         case rightEar = "right_ear_joint"
+        case leftEye = "left_eye_joint"
+        case rightEye = "right_eye_joint"
         case neck = "neck_1_joint"
         case root = "root"
         case leftShoulder = "left_shoulder_1_joint"
@@ -20,7 +27,12 @@ enum AngleCalculator {
         case rightAnkle = "right_foot_joint"
     }
 
-    static func compute(_ points: [PosePoint], cgImageSize: CGSize) -> PoseAngle {
+    struct Result {
+        let angle: PoseAngle
+        let viewAngle: ViewAngle
+    }
+
+    static func compute(_ points: [PosePoint], cgImageSize: CGSize) -> Result {
         let dict = Dictionary(uniqueKeysWithValues: points.map { ($0.joint, $0) })
 
         func physical(_ j: Joint) -> CGPoint? {
@@ -29,86 +41,137 @@ enum AngleCalculator {
                            y: p.location.y * cgImageSize.height)
         }
 
-        guard let neck = physical(.neck), let root = physical(.root) else {
-            print("[AngleCalculator] ⚠️ 缺少 neck 或 root 关键点，无法计算")
-            return PoseAngle()
+        func confidence(_ j: Joint) -> Float {
+            dict[j.rawValue]?.confidence ?? 0
         }
 
-        // 身体中轴方向 (neck → root 的反方向，即脚→头的方向)
+        guard let neck = physical(.neck), let root = physical(.root) else {
+            print("[AngleCalculator] ⚠️ 缺少 neck 或 root，无法计算")
+            return Result(angle: PoseAngle(), viewAngle: .front)
+        }
+
+        // 身体中轴 (root → neck)
         let axisDX = neck.x - root.x
         let axisDY = neck.y - root.y
         let axisLen = hypot(axisDX, axisDY)
         guard axisLen > 10 else {
-            print("[AngleCalculator] ⚠️ 身体中轴太短 (\(axisLen) px)，无法计算")
-            return PoseAngle()
+            print("[AngleCalculator] ⚠️ 身体中轴太短，无法计算")
+            return Result(angle: PoseAngle(), viewAngle: .front)
         }
 
-        // 身体中轴与水平面的夹角（度）
+        // ── 判断视角：对比左右侧检测到的关节数量 ──
+        let leftPairs: [Joint] = [.leftEar, .leftEye, .leftShoulder, .leftElbow, .leftWrist, .leftHip, .leftKnee, .leftAnkle]
+        let rightPairs: [Joint] = [.rightEar, .rightEye, .rightShoulder, .rightElbow, .rightWrist, .rightHip, .rightKnee, .rightAnkle]
+
+        let leftCount = leftPairs.filter { confidence($0) > 0.3 }.count
+        let rightCount = rightPairs.filter { confidence($0) > 0.3 }.count
+        let totalCount = leftCount + rightCount
+
+        // 如果一侧关节数明显多于另一侧（>2倍差），判定为侧面
+        let viewAngle: ViewAngle = {
+            if leftCount == 0 && rightCount == 0 { return .front }
+            let ratio = totalCount > 0 ? Float(max(leftCount, rightCount)) / Float(totalCount) : 0.5
+            return ratio > 0.75 ? .side : .front
+        }()
+
         let bodyAngleDeg = atan2(axisDY, axisDX) * 180 / .pi
 
-        // 计算某条线段相对身体中轴的偏移角度
-        // 返回: 线段与身体中轴法线（即水平线）的夹角
-        func tiltAngle(from j1: Joint, to j2: Joint) -> Float? {
+        // 线段与身体中轴的锐角 [0, 90]
+        func acuteAngleToAxis(from j1: Joint, to j2: Joint) -> Float? {
             guard let a = physical(j1), let b = physical(j2) else { return nil }
             let dx = b.x - a.x
             let dy = b.y - a.y
-            let lineAngle = atan2(dy, dx) * 180 / .pi
-            // 线段与身体中轴的夹角，然后转成与水平面的夹角
-            let relative = abs(lineAngle - bodyAngleDeg)
-            return Float(min(relative, 180 - relative))
+            var rel = abs(atan2(dy, dx) * 180 / .pi - bodyAngleDeg)
+            rel = min(rel, 180 - rel)
+            return Float(rel)
         }
 
-        // 水平偏移（像素），沿身体水平方向的分量
-        func lateralDiff(between j1: Joint, and j2: Joint) -> Float? {
+        // 水平方向倾斜：偏离垂直中轴法线(90°)的量
+        func horizontalTilt(from j1: Joint, to j2: Joint) -> Float? {
+            guard let acute = acuteAngleToAxis(from: j1, to: j2) else { return nil }
+            return abs(90 - acute)
+        }
+
+        // 垂直方向倾斜：偏离垂直中轴的量
+        func verticalTilt(from j1: Joint, to j2: Joint) -> Float? {
+            acuteAngleToAxis(from: j1, to: j2)
+        }
+
+        // 沿身体垂直方向的高差投影 (px)
+        func verticalProjectionDiff(between j1: Joint, and j2: Joint) -> Float? {
             guard let a = physical(j1), let b = physical(j2) else { return nil }
-            let dx = b.x - a.x
-            let dy = b.y - a.y
-            // 投影到身体中轴的法线方向（即身体的水平方向）
-            let normalX = -axisDY / axisLen
-            let normalY = axisDX / axisLen
-            return Float(abs(dx * normalX + dy * normalY))
+            let ux = axisDX / axisLen
+            let uy = axisDY / axisLen
+            return Float(abs((a.x - b.x) * ux + (a.y - b.y) * uy))
         }
 
-        let result = PoseAngle(
-            // 头部侧倾：两耳连线相对于水平的角度
-            headForward: tiltAngle(from: .leftEar, to: .rightEar),
-            // 高低肩：两肩沿身体垂直方向的像素差
-            shoulderDiff: {
-                guard let ls = physical(.leftShoulder), let rs = physical(.rightShoulder) else { return nil }
-                let unitX = axisDX / axisLen
-                let unitY = axisDY / axisLen
-                let leftProj = ls.x * unitX + ls.y * unitY
-                let rightProj = rs.x * unitX + rs.y * unitY
-                return Float(abs(leftProj - rightProj))
-            }(),
-            // 圆肩 → 改为测量肩部水平倾斜角度
-            roundShoulder: tiltAngle(from: .leftShoulder, to: .rightShoulder),
-            // 骨盆倾斜：两髋连线相对于水平的角度
-            pelvicTilt: tiltAngle(from: .leftHip, to: .rightHip),
-            // 腿型：膝盖偏离髋-踝连线的距离（像素）
-            legAlignment: {
-                let hip: Joint = dict[Joint.rightHip.rawValue]?.confidence ?? 0 > (dict[Joint.leftHip.rawValue]?.confidence ?? 0) ? .rightHip : .leftHip
-                let knee: Joint = dict[Joint.rightKnee.rawValue]?.confidence ?? 0 > (dict[Joint.leftKnee.rawValue]?.confidence ?? 0) ? .rightKnee : .leftKnee
-                let ankle: Joint = dict[Joint.rightAnkle.rawValue]?.confidence ?? 0 > (dict[Joint.leftAnkle.rawValue]?.confidence ?? 0) ? .rightAnkle : .leftAnkle
-                guard let hip = physical(hip), let knee = physical(knee), let ankle = physical(ankle) else { return nil }
-                let dx = ankle.x - hip.x
-                let dy = ankle.y - hip.y
-                let lenSq = dx * dx + dy * dy
-                guard lenSq > 0 else { return nil }
-                let t = max(0, min(1, ((knee.x - hip.x) * dx + (knee.y - hip.y) * dy) / lenSq))
-                let projX = hip.x + t * dx
-                let projY = hip.y + t * dy
-                return Float(hypot(knee.x - projX, knee.y - projY))
-            }()
-        )
+        // ── 根据视角计算不同指标 ──
+        let angle: PoseAngle
 
-        print("[AngleCalculator] 📐 身体中轴角度=\(String(format: "%.1f", bodyAngleDeg))° (len=\(Int(axisLen))px)")
-        print("[AngleCalculator]   头部侧倾(ear→ear): \(result.headForward.map { String(format: "%.1f°", $0) } ?? "nil")")
-        print("[AngleCalculator]   高低肩(垂直差): \(result.shoulderDiff.map { String(format: "%.1f px", $0) } ?? "nil")")
-        print("[AngleCalculator]   肩部倾斜(shoulder→shoulder): \(result.roundShoulder.map { String(format: "%.1f°", $0) } ?? "nil")")
-        print("[AngleCalculator]   骨盆倾斜(hip→hip): \(result.pelvicTilt.map { String(format: "%.1f°", $0) } ?? "nil")")
-        print("[AngleCalculator]   腿型(膝偏移): \(result.legAlignment.map { String(format: "%.1f px", $0) } ?? "nil")")
+        switch viewAngle {
+        case .front:
+            angle = PoseAngle(
+                headForward: horizontalTilt(from: .leftEar, to: .rightEar),
+                shoulderDiff: verticalProjectionDiff(between: .leftShoulder, and: .rightShoulder),
+                roundShoulder: horizontalTilt(from: .leftShoulder, to: .rightShoulder),
+                pelvicTilt: horizontalTilt(from: .leftHip, to: .rightHip),
+                legAlignment: {
+                    guard let hip = physical(.rightHip) ?? physical(.leftHip),
+                          let knee = physical(.rightKnee) ?? physical(.leftKnee),
+                          let ankle = physical(.rightAnkle) ?? physical(.leftAnkle) else { return nil }
+                    let dx = ankle.x - hip.x
+                    let dy = ankle.y - hip.y
+                    let lenSq = dx * dx + dy * dy
+                    guard lenSq > 0 else { return nil }
+                    let t = max(0, min(1, ((knee.x - hip.x) * dx + (knee.y - hip.y) * dy) / lenSq))
+                    let projX = hip.x + t * dx
+                    let projY = hip.y + t * dy
+                    return Float(hypot(knee.x - projX, knee.y - projY))
+                }()
+            )
 
-        return result
+        case .side:
+            // 侧面可以测：耳→肩（头前伸）、肩→髋（圆肩）、髋→膝（骨盆前倾）、膝角度
+            let ear: Joint = confidence(.rightEar) > confidence(.leftEar) ? .rightEar : .leftEar
+            let shoulder: Joint = confidence(.rightShoulder) > confidence(.leftShoulder) ? .rightShoulder : .leftShoulder
+            let hip: Joint = confidence(.rightHip) > confidence(.leftHip) ? .rightHip : .leftHip
+            let knee: Joint = confidence(.rightKnee) > confidence(.leftKnee) ? .rightKnee : .leftKnee
+            let ankle: Joint = confidence(.rightAnkle) > confidence(.leftAnkle) ? .rightAnkle : .leftAnkle
+
+            angle = PoseAngle(
+                // 头前伸：耳→肩偏离垂直的角度
+                headForward: verticalTilt(from: ear, to: shoulder),
+                // 高低肩 → 侧面改用 肩→髋 垂直偏移衡量驼背/圆肩
+                shoulderDiff: verticalProjectionDiff(between: shoulder, and: hip),
+                // 圆肩 → 肩→髋 偏离垂直的角度
+                roundShoulder: verticalTilt(from: shoulder, to: hip),
+                // 骨盆前倾：髋→膝 偏离垂直
+                pelvicTilt: verticalTilt(from: hip, to: knee),
+                // 腿型 → 膝超伸角度
+                legAlignment: {
+                    guard let hip = physical(hip), let knee = physical(knee), let ankle = physical(ankle) else { return nil }
+                    // 计算膝关节角度 (髋→膝→踝)
+                    let vec1x = hip.x - knee.x
+                    let vec1y = hip.y - knee.y
+                    let vec2x = ankle.x - knee.x
+                    let vec2y = ankle.y - knee.y
+                    let dot = vec1x * vec2x + vec1y * vec2y
+                    let mag1 = hypot(vec1x, vec1y)
+                    let mag2 = hypot(vec2x, vec2y)
+                    guard mag1 > 0, mag2 > 0 else { return nil }
+                    let kneeAngle = acos(max(-1, min(1, dot / (mag1 * mag2)))) * 180 / .pi
+                    return Float(kneeAngle)
+                }()
+            )
+        }
+
+        print("[AngleCalculator] 📐 视角=\(viewAngle.rawValue) (左\(leftCount) 右\(rightCount)) 中轴=\(String(format: "%.1f", bodyAngleDeg))°")
+        print("[AngleCalculator]   头前伸/侧倾: \(angle.headForward.map { String(format: "%.1f°", $0) } ?? "nil")")
+        print("[AngleCalculator]   高低肩/驼背: \(angle.shoulderDiff.map { String(format: "%.1f px", $0) } ?? "nil")")
+        print("[AngleCalculator]   圆肩/肩倾斜: \(angle.roundShoulder.map { String(format: "%.1f°", $0) } ?? "nil")")
+        print("[AngleCalculator]   骨盆倾斜/前倾: \(angle.pelvicTilt.map { String(format: "%.1f°", $0) } ?? "nil")")
+        print("[AngleCalculator]   腿型/膝角度: \(angle.legAlignment.map { String(format: "%.1f", $0) } ?? "nil")")
+
+        return Result(angle: angle, viewAngle: viewAngle)
     }
 }
