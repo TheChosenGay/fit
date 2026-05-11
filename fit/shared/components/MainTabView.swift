@@ -3,12 +3,16 @@ import SwiftUI
 struct MainTabView: View {
     var body: some View {
         TabView {
-            CameraView()
+            AppNavigationStack {
+                    CameraView()
+                }
                 .tabItem {
                     Label("分析", systemImage: "camera")
                 }
 
-            HistoryView()
+            AppNavigationStack {
+                    HistoryView()
+                }
                 .tabItem {
                     Label("历史", systemImage: "clock")
                 }

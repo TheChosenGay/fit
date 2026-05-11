@@ -18,7 +18,6 @@ struct CameraView: View {
         }
         .task { await viewModel.checkAndRequestPermission() }
         .onDisappear { viewModel.stopSession() }
-        // 拍照/选照片成功后自动弹出预览
         .onChange(of: viewModel.capturedImage) { image in
             if image != nil { showPreview = true }
         }
@@ -27,7 +26,7 @@ struct CameraView: View {
                 viewModel.handlePickedPhoto(image)
             }
         }
-        .fullScreenCover(isPresented: $showPreview) {
+        .navigationDestination(isPresented: $showPreview) {
             if let image = viewModel.capturedImage {
                 PhotoPreviewView(
                     image: image,
@@ -40,6 +39,7 @@ struct CameraView: View {
                         analysisImage = nil
                     }
                 )
+                .navigationBarHidden(true)
             }
         }
         .onChange(of: showPreview) { isPresented in
@@ -47,7 +47,7 @@ struct CameraView: View {
                 showAnalysis = true
             }
         }
-        .fullScreenCover(isPresented: $showAnalysis) {
+        .navigationDestination(isPresented: $showAnalysis) {
             if let image = analysisImage {
                 PoseAnalysisView(image: image)
             }
