@@ -20,4 +20,9 @@ enum ServiceEndpoint {
         private static let base = "https://open.bigmodel.cn/api/paas/v4"
         static let chatCompletions = URL(string: "\(base)/chat/completions")!
     }
+
+    enum MiniMax {
+        private static let base = "https://api.minimax.chat/v1/text"
+        static let chatCompletions = URL(string: "\(base)/chatcompletion_v2")!
+    }
 }

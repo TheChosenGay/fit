@@ -63,7 +63,7 @@ struct PoseAnalysisView: View {
         ScrollView {
             VStack(spacing: 20) {
                 // 多模态模型显示边缘合成图，否则显示骨骼标注图
-                if selectedModel == .zhipu, let edgeImg = viewModel.edgeCompositeImage {
+                if selectedModel == .zhipu || selectedModel == .minimax, let edgeImg = viewModel.edgeCompositeImage {
                     Image(uiImage: edgeImg)
                         .resizable()
                         .scaledToFit()

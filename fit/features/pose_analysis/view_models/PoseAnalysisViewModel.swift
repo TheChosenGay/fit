@@ -54,8 +54,8 @@ final class PoseAnalysisViewModel: ObservableObject {
             angles = result.angle
             annotatedImage = SkeletonRenderer.render(image: image, points: points)
 
-            // 多模态模型：生成边缘+骨骼合成图
-            if aiModel == .zhipu {
+            // 多模态模型：生成人像分割+骨骼合成图
+            if aiModel == .zhipu || aiModel == .minimax {
                 edgeCompositeImage = EdgeDetector.composite(image: image, points: points)
             }
 
@@ -83,7 +83,12 @@ final class PoseAnalysisViewModel: ObservableObject {
             let compositeImage = edgeCompositeImage
                 ?? EdgeDetector.composite(image: image, points: points)
                 ?? image
-            return try await multimodalService.analyze(image: compositeImage, angles: angles)
+            return try await ZhipuVisionService.shared.analyze(image: compositeImage, angles: angles)
+        case .minimax:
+            let compositeImage = edgeCompositeImage
+                ?? EdgeDetector.composite(image: image, points: points)
+                ?? image
+            return try await MiniMaxVisionService.shared.analyze(image: compositeImage, angles: angles)
         }
     }
 }

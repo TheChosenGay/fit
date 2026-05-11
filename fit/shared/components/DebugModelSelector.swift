@@ -2,6 +2,7 @@ import SwiftUI
 
 enum AIModel: String, CaseIterable, Identifiable {
     case deepseek = "DeepSeek (文本)"
+    case minimax = "MiniMax (多模态)"
     case zhipu = "智谱 GLM-4V (多模态)"
 
     var id: String { rawValue }

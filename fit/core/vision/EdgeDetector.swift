@@ -1,34 +1,22 @@
 import UIKit
+import Vision
 import CoreImage
 
 enum EdgeDetector {
-    /// 边缘 + 骨骼 合成图（用于多模态 AI 分析）
-    /// - Parameters:
-    ///   - image: 原始照片
-    ///   - points: 姿态关键点（可选）
-    ///   - maxEdge: 边缘图最长边尺寸，默认 512px
-    /// - Returns: 合成后的边缘图
+    /// 人像分割 + 骨骼叠加 合成图（用于多模态 AI 分析）
+    /// 背景替换为黑色，仅保留人物 + 绿色骨骼标注
     static func composite(image: UIImage, points: [PosePoint] = [], maxEdge: CGFloat = 512) -> UIImage? {
         guard let cgImage = image.cgImage else { return nil }
-        let ciImage = CIImage(cgImage: cgImage)
 
-        // 缩放到 maxEdge
-        let scale = maxEdge / max(ciImage.extent.width, ciImage.extent.height)
-        let targetW = Int(ciImage.extent.width * scale)
-        let targetH = Int(ciImage.extent.height * scale)
+        let scale = maxEdge / max(CGFloat(cgImage.width), CGFloat(cgImage.height))
+        let targetW = Int(CGFloat(cgImage.width) * scale)
+        let targetH = Int(CGFloat(cgImage.height) * scale)
         guard targetW > 0, targetH > 0 else { return nil }
 
-        guard let edge = CIFilter(name: "CICannyEdgeDetector", parameters: [
-            kCIInputImageKey: ciImage,
-            "inputGaussianSigma": 1.5,
-            "inputPerceptual": true,
-        ])?.outputImage else { return nil }
+        // 人像分割
+        let mask = personMask(cgImage: cgImage)
 
         // 缩放到目标尺寸
-        let edgeScaled = edge.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-        let context = CIContext()
-        guard let edgeCG = context.createCGImage(edgeScaled, from: CGRect(x: 0, y: 0, width: targetW, height: targetH)) else { return nil }
-
         let renderSize = CGSize(width: targetW, height: targetH)
         let renderer = UIGraphicsImageRenderer(size: renderSize)
         return renderer.image { ctx in
@@ -36,17 +24,29 @@ enum EdgeDetector {
             UIColor.black.setFill()
             ctx.fill(CGRect(origin: .zero, size: renderSize))
 
-            // 边缘图（白色线条）
-            UIImage(cgImage: edgeCG).draw(in: CGRect(origin: .zero, size: renderSize), blendMode: .normal, alpha: 0.6)
+            // 用蒙版绘制人物（仅保留人像，背景为黑）
+            if let mask {
+                let maskScaled = mask.scaledToFit(CGSize(width: targetW, height: targetH))
+                let personRect = maskScaled.map {
+                    CGRect(x: (renderSize.width - CGFloat($0.width)) / 2,
+                           y: (renderSize.height - CGFloat($0.height)) / 2,
+                           width: CGFloat($0.width), height: CGFloat($0.height))
+                } ?? CGRect(origin: .zero, size: renderSize)
+
+                // 绘制原图，用蒙版裁切
+                let cgCtx = ctx.cgContext
+                cgCtx.saveGState()
+                cgCtx.clip(to: personRect, mask: mask)
+                UIImage(cgImage: cgImage).draw(in: personRect)
+                cgCtx.restoreGState()
+            } else {
+                // 无蒙版时降级：直接绘制原图
+                UIImage(cgImage: cgImage).draw(in: CGRect(origin: .zero, size: renderSize))
+            }
 
             guard !points.isEmpty else { return }
 
-            // 骨骼连接
             let dict = Dictionary(uniqueKeysWithValues: points.map { ($0.joint, $0) })
-            let path = UIBezierPath()
-            path.lineWidth = max(renderSize.width, renderSize.height) * 0.004
-
-            // 复用 SkeletonRenderer 的连接定义
             let connections: [(String, String)] = [
                 ("left_ear_joint", "neck_1_joint"), ("right_ear_joint", "neck_1_joint"),
                 ("neck_1_joint", "left_shoulder_1_joint"), ("left_shoulder_1_joint", "left_forearm_joint"), ("left_forearm_joint", "left_hand_joint"),
@@ -62,31 +62,63 @@ enum EdgeDetector {
                 CGPoint(x: p.x * renderSize.width, y: (1.0 - p.y) * renderSize.height)
             }
 
+            let path = UIBezierPath()
+            path.lineWidth = max(renderSize.width, renderSize.height) * 0.004
             for (j1, j2) in connections {
                 guard let p1 = dict[j1], let p2 = dict[j2],
                       p1.confidence > 0.3, p2.confidence > 0.3 else { continue }
                 path.move(to: denorm(p1.location))
                 path.addLine(to: denorm(p2.location))
             }
-            UIColor.green.withAlphaComponent(0.7).setStroke()
+            UIColor.green.withAlphaComponent(0.8).setStroke()
             path.stroke()
 
-            // 关节点
             for (_, p) in dict where p.confidence > 0.3 {
                 let center = denorm(p.location)
                 let radius = max(renderSize.width, renderSize.height) * 0.012
                 let color: UIColor = p.confidence > 0.6
-                    ? UIColor.green.withAlphaComponent(0.9)
-                    : UIColor.yellow.withAlphaComponent(0.7)
-                UIBezierPath(arcCenter: center, radius: radius, startAngle: 0, endAngle: .pi * 2, clockwise: true).fillWith(color)
+                    ? UIColor.green.withAlphaComponent(0.95)
+                    : UIColor.yellow.withAlphaComponent(0.75)
+                let circle = UIBezierPath(arcCenter: center, radius: radius, startAngle: 0, endAngle: .pi * 2, clockwise: true)
+                color.setFill()
+                circle.fill()
             }
         }
     }
+
+    // MARK: - Person segmentation
+
+    private static func personMask(cgImage: CGImage) -> CGImage? {
+        let request = VNGeneratePersonSegmentationRequest()
+        request.qualityLevel = .accurate
+        let handler = VNImageRequestHandler(cgImage: cgImage)
+        do {
+            try handler.perform([request])
+            guard let maskPixelBuffer = request.results?.first?.pixelBuffer else { return nil }
+            return pixelBufferToCGImage(maskPixelBuffer)
+        } catch {
+            print("[EdgeDetector] 人像分割失败: \(error)")
+            return nil
+        }
+    }
+
+    private static func pixelBufferToCGImage(_ pixelBuffer: CVPixelBuffer) -> CGImage? {
+        let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+        let context = CIContext()
+        return context.createCGImage(ciImage, from: ciImage.extent)
+    }
 }
 
-private extension UIBezierPath {
-    func fillWith(_ color: UIColor) {
-        color.setFill()
-        fill()
+private extension CGImage {
+    func scaledToFit(_ target: CGSize) -> CGImage? {
+        let scale = min(target.width / CGFloat(width), target.height / CGFloat(height))
+        let w = Int(CGFloat(width) * scale)
+        let h = Int(CGFloat(height) * scale)
+        guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8,
+                                   bytesPerRow: 0, space: CGColorSpaceCreateDeviceGray(),
+                                   bitmapInfo: CGImageAlphaInfo.none.rawValue) else { return nil }
+        ctx.interpolationQuality = .high
+        ctx.draw(self, in: CGRect(x: 0, y: 0, width: w, height: h))
+        return ctx.makeImage()
     }
 }
