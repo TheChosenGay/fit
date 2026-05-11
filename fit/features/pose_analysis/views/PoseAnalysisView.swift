@@ -23,7 +23,10 @@ struct PoseAnalysisView: View {
                 errorView
             }
         }
-        .task { await viewModel.startAnalysis() }
+        .task {
+            guard viewModel.phase != .done else { return }
+            await viewModel.startAnalysis()
+        }
     }
 
     // MARK: - Loading
