@@ -37,14 +37,21 @@ struct PhotoPickerView: UIViewControllerRepresentable {
         }
 
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-            dismiss()
             guard let provider = results.first?.itemProvider,
-                  provider.canLoadObject(ofClass: UIImage.self) else { return }
+                  provider.canLoadObject(ofClass: UIImage.self) else {
+                dismiss()
+                return
+            }
 
             provider.loadObject(ofClass: UIImage.self) { [weak self] object, _ in
-                guard let image = object as? UIImage else { return }
+                guard let self else { return }
+                let image = object as? UIImage
                 DispatchQueue.main.async {
-                    self?.onImagePicked(image)
+                    self.dismiss()
+                    guard let image else { return }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        self.onImagePicked(image)
+                    }
                 }
             }
         }

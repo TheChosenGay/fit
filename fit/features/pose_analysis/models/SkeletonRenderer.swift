@@ -33,21 +33,22 @@ enum SkeletonRenderer {
     ]
 
     static func render(image: UIImage, points: [PosePoint]) -> UIImage {
+        guard let cgImage = image.cgImage else { return image }
         let dict = Dictionary(uniqueKeysWithValues: points.map { ($0.joint, $0) })
-        let imageSize = image.size
+        let cgSize = CGSize(width: cgImage.width, height: cgImage.height)
 
-        let renderer = UIGraphicsImageRenderer(size: imageSize)
-        return renderer.image { ctx in
-            image.draw(at: .zero)
+        let renderer = UIGraphicsImageRenderer(size: cgSize)
+        let annotatedCGImage = renderer.image { ctx in
+            UIImage(cgImage: cgImage).draw(in: CGRect(origin: .zero, size: cgSize))
 
             let path = UIBezierPath()
-            path.lineWidth = max(imageSize.width, imageSize.height) * 0.003
+            path.lineWidth = max(cgSize.width, cgSize.height) * 0.003
 
             for (j1, j2) in connections {
                 guard let p1 = dict[j1.rawValue], let p2 = dict[j2.rawValue],
                       p1.confidence > 0.3, p2.confidence > 0.3 else { continue }
-                let from = denormalize(p1.location, to: imageSize)
-                let to = denormalize(p2.location, to: imageSize)
+                let from = denormalize(p1.location, to: cgSize)
+                let to = denormalize(p2.location, to: cgSize)
                 path.move(to: from)
                 path.addLine(to: to)
             }
@@ -56,8 +57,8 @@ enum SkeletonRenderer {
             path.stroke()
 
             for (_, point) in dict where point.confidence > 0.3 {
-                let center = denormalize(point.location, to: imageSize)
-                let radius = max(imageSize.width, imageSize.height) * 0.008
+                let center = denormalize(point.location, to: cgSize)
+                let radius = max(cgSize.width, cgSize.height) * 0.008
                 let color: UIColor = point.confidence > 0.6
                     ? UIColor.green.withAlphaComponent(0.9)
                     : UIColor.yellow.withAlphaComponent(0.8)
@@ -68,10 +69,12 @@ enum SkeletonRenderer {
                 color.setFill()
                 circle.fill()
             }
-        }
+        }.cgImage!
+
+        return UIImage(cgImage: annotatedCGImage, scale: image.scale, orientation: image.imageOrientation)
     }
 
     private static func denormalize(_ point: CGPoint, to size: CGSize) -> CGPoint {
-        CGPoint(x: point.x * size.width, y: point.y * size.height)
+        CGPoint(x: point.x * size.width, y: (1.0 - point.y) * size.height)
     }
 }
