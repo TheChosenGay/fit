@@ -2,25 +2,22 @@ import Foundation
 
 enum AngleCalculator {
     private enum Joint: String {
-        case nose
-        case leftEye
-        case rightEye
-        case leftEar
-        case rightEar
-        case neck
-        case root
-        case leftShoulder
-        case rightShoulder
-        case leftElbow
-        case rightElbow
-        case leftWrist
-        case rightWrist
-        case leftHip
-        case rightHip
-        case leftKnee
-        case rightKnee
-        case leftAnkle
-        case rightAnkle
+        case leftEar = "left_ear_joint"
+        case rightEar = "right_ear_joint"
+        case neck = "neck_1_joint"
+        case root = "root"
+        case leftShoulder = "left_shoulder_1_joint"
+        case rightShoulder = "right_shoulder_1_joint"
+        case leftElbow = "left_forearm_joint"
+        case rightElbow = "right_forearm_joint"
+        case leftWrist = "left_hand_joint"
+        case rightWrist = "right_hand_joint"
+        case leftHip = "left_upLeg_joint"
+        case rightHip = "right_upLeg_joint"
+        case leftKnee = "left_leg_joint"
+        case rightKnee = "right_leg_joint"
+        case leftAnkle = "left_foot_joint"
+        case rightAnkle = "right_foot_joint"
     }
 
     static func compute(_ points: [PosePoint]) -> PoseAngle {

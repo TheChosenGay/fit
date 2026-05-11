@@ -34,7 +34,11 @@ final class CameraViewModel: ObservableObject {
     // MARK: - Session
 
     private func setupSession() async {
-        // nonisolated 方法可直接在后台线程调用
+        // 已配置过则直接重启，避免重复 addInput 报错
+        guard cameraSession.session.inputs.isEmpty else {
+            cameraSession.start()
+            return
+        }
         do {
             try cameraSession.configure()
             cameraSession.start()
