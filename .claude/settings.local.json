@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p /Users/daishan/.claude/commands/knowledge)",
+      "Bash(mkdir -p /Users/daishan/.claude/commands/test)",
+      "Bash(git *)",
+      "Bash(xcodebuild -project fit.xcodeproj -scheme fit -configuration Debug -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 16' build)"
+    ]
+  }
+}

@@ -1,57 +1,53 @@
+//
+//  VisionPoseDetector.swift
+//  fit
+//
+//  Created by dai shan on 2026/5/9.
+//
+
+import Foundation
 import Vision
 import UIKit
 
-// MARK: - PosePoint
-struct PosePoint {
-    let joint: VNHumanBodyPoseObservation.JointName
-    let location: CGPoint   // 归一化坐标 (0-1)
-    let confidence: Float
-}
-
-// MARK: - PoseDetectionResult
-struct PoseDetectionResult {
-    let points: [VNHumanBodyPoseObservation.JointName: PosePoint]
-
-    func point(_ joint: VNHumanBodyPoseObservation.JointName) -> PosePoint? {
-        points[joint]
-    }
-}
-
-// MARK: - VisionPoseDetector
-final class VisionPoseDetector {
-    static let shared = VisionPoseDetector()
+class VisionPoseDetector {
+    nonisolated static let detector = VisionPoseDetector()
     private init() {}
+}
 
-    /// 对静态图片执行姿态检测
-    func detect(image: UIImage) async throws -> PoseDetectionResult? {
-        guard let cgImage = image.cgImage else { return nil }
 
+extension VisionPoseDetector: PoseDetectService {
+    func detectPose(from image: UIImage) async throws -> PosePoints? {
+        guard let cgImage = image.cgImage else {return nil}
+        
         return try await withCheckedThrowingContinuation { continuation in
             let request = VNDetectHumanBodyPoseRequest { request, error in
                 if let error {
                     continuation.resume(throwing: error)
                     return
                 }
+                
                 guard let observation = request.results?.first as? VNHumanBodyPoseObservation else {
-                    continuation.resume(returning: nil)
+                    continuation.resume(returning: [])
                     return
                 }
+                
                 do {
                     let allPoints = try observation.recognizedPoints(.all)
-                    var posePoints: [VNHumanBodyPoseObservation.JointName: PosePoint] = [:]
+                    var posPoints: [PosePoint] = []
                     for (joint, point) in allPoints where point.confidence > 0.3 {
-                        posePoints[joint] = PosePoint(
-                            joint: joint,
-                            location: point.location,
-                            confidence: point.confidence
+                        posPoints.append(
+                            PosePoint(
+                                joint: joint.rawValue.rawValue, location: point.location, confidence: point.confidence
+                            )
                         )
                     }
-                    continuation.resume(returning: PoseDetectionResult(points: posePoints))
+                    continuation.resume(returning: posPoints)
                 } catch {
                     continuation.resume(throwing: error)
                 }
+                
             }
-
+            
             let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
             do {
                 try handler.perform([request])

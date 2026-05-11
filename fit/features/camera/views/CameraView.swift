@@ -5,6 +5,8 @@ struct CameraView: View {
     @StateObject private var viewModel = CameraViewModel()
     @State private var showPhotoPicker = false
     @State private var showPreview = false
+    @State private var showAnalysis = false
+    @State private var analysisImage: UIImage?
 
     var body: some View {
         ZStack {
@@ -30,14 +32,28 @@ struct CameraView: View {
                 PhotoPreviewView(
                     image: image,
                     onConfirm: {
-                        // TODO: 进入模块B分析流程
+                        analysisImage = image
                     },
                     onRetake: {
                         viewModel.capturedImage = nil
                         viewModel.lastSavedFileName = nil
+                        analysisImage = nil
                     }
                 )
             }
+        }
+        .onChange(of: showPreview) { isPresented in
+            if !isPresented, analysisImage != nil {
+                showAnalysis = true
+            }
+        }
+        .fullScreenCover(isPresented: $showAnalysis) {
+            if let image = analysisImage {
+                PoseAnalysisView(image: image)
+            }
+        }
+        .onChange(of: showAnalysis) { isPresented in
+            if !isPresented { analysisImage = nil }
         }
         .alert("相机错误", isPresented: .constant(viewModel.error != nil)) {
             Button("确定") { viewModel.error = nil }
