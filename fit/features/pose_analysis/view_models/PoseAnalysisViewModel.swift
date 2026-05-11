@@ -33,6 +33,7 @@ final class PoseAnalysisViewModel: ObservableObject {
     func startAnalysis() async {
         phase = .detecting
         error = nil
+        await Task.yield()
 
         do {
             guard let points = try await poseDetector.detectPose(from: image), !points.isEmpty else {

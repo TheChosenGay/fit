@@ -4,22 +4,19 @@ final class AIAnalysisService: PoseAnalysisService {
     nonisolated static let shared = AIAnalysisService()
     private init() {}
 
-    private let endpoint = URL(string: "https://api.anthropic.com/v1/messages")!
-
     func analyze(angles: PoseAngle) async throws -> AnalysisReport {
         let body = try JSONEncoder().encode(buildRequest(angles: angles))
         let headers = [
-            "x-api-key": Secrets.claudeAPIKey,
-            "anthropic-version": "2023-06-01",
+            "Authorization": "Bearer \(Secrets.deepseekAPIKey)",
         ]
 
-        let response: ClaudeResponse = try await NetworkService.shared.request(
-            url: endpoint,
+        let response: DeepSeekResponse = try await NetworkService.shared.request(
+            url: ServiceEndpoint.DeepSeek.chatCompletions,
             headers: headers,
             body: body
         )
 
-        guard let text = response.content.first?.text else {
+        guard let text = response.choices.first?.message.content else {
             throw AIAnalysisError.emptyResponse
         }
 
@@ -31,7 +28,7 @@ final class AIAnalysisService: PoseAnalysisService {
         return try JSONDecoder().decode(AnalysisReport.self, from: jsonData)
     }
 
-    private func buildRequest(angles: PoseAngle) -> ClaudeRequest {
+    private func buildRequest(angles: PoseAngle) -> DeepSeekRequest {
         let prompt = """
         你是一位专业的体态评估师。根据以下检测数据，给出体态分析报告。只分析有数据支撑的问题，数据正常项可简要提及。
 
@@ -46,11 +43,13 @@ final class AIAnalysisService: PoseAnalysisService {
         {"issues":[{"name":"圆肩","severity":"moderate","description":"肩关节前旋明显...","score":65}],"overall_score":72,"summary":"一句话总结"}
         """
 
-        return ClaudeRequest(
-            model: "claude-sonnet-4-6",
+        return DeepSeekRequest(
+            model: "deepseek-chat",
             maxTokens: 1024,
-            system: "你是一位专业的体态评估师。用中文回答，给出3-5个主要问题，严格返回JSON格式。",
-            messages: [.init(role: "user", content: prompt)]
+            messages: [
+                .init(role: "system", content: "你是一位专业的体态评估师。用中文回答，给出3-5个主要问题，严格返回JSON格式。"),
+                .init(role: "user", content: prompt),
+            ]
         )
     }
 
@@ -88,12 +87,11 @@ enum AIAnalysisError: Error, LocalizedError {
     }
 }
 
-// MARK: - Claude API models
+// MARK: - DeepSeek API models (OpenAI-compatible)
 
-private struct ClaudeRequest: Encodable {
+private struct DeepSeekRequest: Encodable {
     let model: String
     let maxTokens: Int
-    let system: String
     let messages: [Message]
 
     struct Message: Encodable {
@@ -104,14 +102,16 @@ private struct ClaudeRequest: Encodable {
     enum CodingKeys: String, CodingKey {
         case model
         case maxTokens = "max_tokens"
-        case system, messages
+        case messages
     }
 }
 
-private struct ClaudeResponse: Decodable {
-    struct Content: Decodable {
-        let type: String
-        let text: String
+private struct DeepSeekResponse: Decodable {
+    struct Choice: Decodable {
+        struct Message: Decodable {
+            let content: String
+        }
+        let message: Message
     }
-    let content: [Content]
+    let choices: [Choice]
 }

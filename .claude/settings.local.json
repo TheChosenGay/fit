@@ -4,7 +4,11 @@
       "Bash(mkdir -p /Users/daishan/.claude/commands/knowledge)",
       "Bash(mkdir -p /Users/daishan/.claude/commands/test)",
       "Bash(git *)",
-      "Bash(xcodebuild -project fit.xcodeproj -scheme fit -configuration Debug -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 16' build)"
+      "Bash(xcodebuild -project fit.xcodeproj -scheme fit -configuration Debug -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 16' build)",
+      "Bash(security find-identity *)",
+      "Bash(xcodebuild -project /Users/daishan/fit/fit/fit.xcodeproj -scheme fit -configuration Debug -sdk iphoneos -destination 'platform=iOS,id=00008103-000A310A3EC0001E' -allowProvisioningUpdates build)",
+      "Bash(xcodebuild -project fit.xcodeproj -showBuildSettings)",
+      "Bash(xcodebuild -project fit.xcodeproj -scheme fit -destination 'platform=iOS Simulator,name=iPhone 16' build)"
     ]
   }
 }

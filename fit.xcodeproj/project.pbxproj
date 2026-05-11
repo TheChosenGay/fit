@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		19AECFCB2FB19C3900EBB2DF /* LookinServer in Frameworks */ = {isa = PBXBuildFile; productRef = 19AECFCA2FB19C3900EBB2DF /* LookinServer */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		19AECF552FAE35A300EBB2DF /* fit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = fit.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				19AECFCB2FB19C3900EBB2DF /* LookinServer in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +70,7 @@
 			);
 			name = fit;
 			packageProductDependencies = (
+				19AECFCA2FB19C3900EBB2DF /* LookinServer */,
 			);
 			productName = fit;
 			productReference = 19AECF552FAE35A300EBB2DF /* fit.app */;
@@ -94,6 +100,9 @@
 			);
 			mainGroup = 19AECF4C2FAE35A300EBB2DF;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				19AECFC92FB19C3900EBB2DF /* XCRemoteSwiftPackageReference "LookinServer" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 19AECF562FAE35A300EBB2DF /* Products */;
 			projectDirPath = "";
@@ -353,6 +362,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		19AECFC92FB19C3900EBB2DF /* XCRemoteSwiftPackageReference "LookinServer" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/QMUI/LookinServer";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.2.8;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		19AECFCA2FB19C3900EBB2DF /* LookinServer */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 19AECFC92FB19C3900EBB2DF /* XCRemoteSwiftPackageReference "LookinServer" */;
+			productName = LookinServer;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 19AECF4D2FAE35A300EBB2DF /* Project object */;
 }
