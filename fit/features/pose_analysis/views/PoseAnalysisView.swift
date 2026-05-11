@@ -2,12 +2,15 @@ import SwiftUI
 
 struct PoseAnalysisView: View {
     let image: UIImage
+    @State private var selectedModel: AIModel = .deepseek
     @StateObject private var viewModel: PoseAnalysisViewModel
     @Environment(\.dismiss) private var dismiss
 
     init(image: UIImage) {
         self.image = image
-        _viewModel = StateObject(wrappedValue: PoseAnalysisViewModel(image: image))
+        let model = AIModel.deepseek
+        _selectedModel = State(initialValue: model)
+        _viewModel = StateObject(wrappedValue: PoseAnalysisViewModel(image: image, aiModel: model))
     }
 
     var body: some View {
@@ -22,6 +25,16 @@ struct PoseAnalysisView: View {
             case .error:
                 errorView
             }
+        }
+        .overlay(alignment: .topTrailing) {
+            DebugModelButton(selectedModel: $selectedModel)
+                .padding(.top, 60)
+                .padding(.trailing, 16)
+        }
+        .onChange(of: selectedModel) { newModel in
+            // Model changed, re-run analysis
+            viewModel.aiModel = newModel
+            Task { await viewModel.startAnalysis() }
         }
         .task {
             guard viewModel.phase != .done else { return }
@@ -38,6 +51,9 @@ struct PoseAnalysisView: View {
             Text(viewModel.phase == .detecting ? "正在检测姿态..." : "正在 AI 分析...")
                 .font(.appBody)
                 .foregroundColor(.secondary)
+            Text("模型: \(selectedModel.rawValue)")
+                .font(.appCaption)
+                .foregroundColor(.secondary)
         }
     }
 
@@ -46,7 +62,16 @@ struct PoseAnalysisView: View {
     private var resultView: some View {
         ScrollView {
             VStack(spacing: 20) {
-                if let annotatedImage = viewModel.annotatedImage {
+                // 多模态模型显示边缘合成图，否则显示骨骼标注图
+                if selectedModel == .zhipu, let edgeImg = viewModel.edgeCompositeImage {
+                    Image(uiImage: edgeImg)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity)
+                        .cornerRadius(12)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
+                } else if let annotatedImage = viewModel.annotatedImage {
                     Image(uiImage: annotatedImage)
                         .resizable()
                         .scaledToFit()
@@ -78,28 +103,28 @@ struct PoseAnalysisView: View {
 
             if let angles = viewModel.angles {
                 AngleCard(
-                    label: "头前伸",
+                    label: "头部侧倾",
                     value: angles.headForward.map { String(format: "%.1f°", $0) },
                     severity: severity(angles.headForward, for: .headForward)
                 )
                 AngleCard(
                     label: "高低肩差",
-                    value: angles.shoulderDiff.map { String(format: "%.3f", $0) },
+                    value: angles.shoulderDiff.map { String(format: "%.0f px", $0) },
                     severity: severity(angles.shoulderDiff, for: .shoulderDiff)
                 )
                 AngleCard(
-                    label: "圆肩",
+                    label: "肩部倾斜",
                     value: angles.roundShoulder.map { String(format: "%.1f°", $0) },
                     severity: severity(angles.roundShoulder, for: .roundShoulder)
                 )
                 AngleCard(
-                    label: "骨盆前倾",
+                    label: "骨盆倾斜",
                     value: angles.pelvicTilt.map { String(format: "%.1f°", $0) },
                     severity: severity(angles.pelvicTilt, for: .pelvicTilt)
                 )
                 AngleCard(
                     label: "腿型偏移",
-                    value: angles.legAlignment.map { String(format: "%.3f", $0) },
+                    value: angles.legAlignment.map { String(format: "%.0f px", $0) },
                     severity: severity(angles.legAlignment, for: .legAlignment)
                 )
             }
@@ -267,7 +292,7 @@ private struct AngleCard: View {
     }
 }
 
-// MARK: - Severity helpers
+// MARK: - Severity helpers (pixel-based thresholds)
 
 private enum AngleType {
     case headForward, shoulderDiff, roundShoulder, pelvicTilt, legAlignment
@@ -277,24 +302,24 @@ private func severity(_ value: Float?, for type: AngleType) -> (text: String, co
     guard let value else { return ("无数据", .gray) }
     switch type {
     case .headForward:
-        if value <= 5 { return ("正常", .green) }
-        else if value <= 10 { return ("轻度", .yellow) }
+        if value <= 3 { return ("正常", .green) }
+        else if value <= 7 { return ("轻度", .yellow) }
         else { return ("明显", .red) }
     case .shoulderDiff:
-        if value <= 0.01 { return ("正常", .green) }
-        else if value <= 0.02 { return ("轻度", .yellow) }
+        if value <= 30 { return ("正常", .green) }
+        else if value <= 60 { return ("轻度", .yellow) }
         else { return ("明显", .red) }
     case .roundShoulder:
-        if value <= 10 { return ("正常", .green) }
-        else if value <= 15 { return ("轻度", .yellow) }
+        if value <= 3 { return ("正常", .green) }
+        else if value <= 7 { return ("轻度", .yellow) }
         else { return ("明显", .red) }
     case .pelvicTilt:
-        if value <= 10 { return ("正常", .green) }
-        else if value <= 15 { return ("轻度", .yellow) }
+        if value <= 3 { return ("正常", .green) }
+        else if value <= 7 { return ("轻度", .yellow) }
         else { return ("明显", .red) }
     case .legAlignment:
-        if value <= 0.02 { return ("正常", .green) }
-        else if value <= 0.03 { return ("轻度", .yellow) }
+        if value <= 25 { return ("正常", .green) }
+        else if value <= 45 { return ("轻度", .yellow) }
         else { return ("明显", .red) }
     }
 }

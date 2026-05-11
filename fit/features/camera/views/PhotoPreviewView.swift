@@ -8,6 +8,8 @@ struct PhotoPreviewView: View {
     let onRetake: () -> Void
 
     @State private var showToast = false
+    @State private var showEdgePreview = false
+    @State private var edgeImage: UIImage?
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -16,14 +18,41 @@ struct PhotoPreviewView: View {
 
             VStack(spacing: 0) {
                 // 照片预览
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Group {
+                    if showEdgePreview, let edge = edgeImage {
+                        Image(uiImage: edge)
+                            .resizable()
+                            .scaledToFit()
+                    } else {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFit()
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 // 底部操作栏
                 actionBar
                     .background(Color.black)
+            }
+
+            // 边缘预览切换按钮
+            VStack {
+                HStack {
+                    Spacer()
+                    Button {
+                        withAnimation { showEdgePreview.toggle() }
+                    } label: {
+                        Text(showEdgePreview ? "原图" : "边缘")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Capsule().fill(Color.blue.opacity(0.7)))
+                    }
+                    .padding(.trailing, 16)
+                }
+                Spacer()
             }
 
             // Toast
@@ -33,7 +62,10 @@ struct PhotoPreviewView: View {
                     .zIndex(1)
             }
         }
-        .onAppear { triggerToast() }
+        .onAppear {
+            triggerToast()
+            edgeImage = EdgeDetector.composite(image: image)
+        }
     }
 
     // MARK: - 底部操作栏

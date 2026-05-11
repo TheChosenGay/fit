@@ -5,10 +5,13 @@ import SwiftUI
 final class PoseAnalysisViewModel: ObservableObject {
     let image: UIImage
     let poseDetector: PoseDetectService
-    let analysisService: PoseAnalysisService
+    let textAnalysisService: PoseAnalysisService
+    let multimodalService: MultimodalAnalysisService
+    var aiModel: AIModel
 
     @Published var phase: AnalysisPhase = .detecting
     @Published var annotatedImage: UIImage?
+    @Published var edgeCompositeImage: UIImage?
     @Published var angles: PoseAngle?
     @Published var report: AnalysisReport?
     @Published var error: String?
@@ -22,12 +25,16 @@ final class PoseAnalysisViewModel: ObservableObject {
 
     init(
         image: UIImage,
+        aiModel: AIModel = .deepseek,
         poseDetector: PoseDetectService = VisionPoseDetector.detector,
-        analysisService: PoseAnalysisService = AIAnalysisService.shared
+        textAnalysisService: PoseAnalysisService = AIAnalysisService.shared,
+        multimodalService: MultimodalAnalysisService = ZhipuVisionService.shared
     ) {
         self.image = image
+        self.aiModel = aiModel
         self.poseDetector = poseDetector
-        self.analysisService = analysisService
+        self.textAnalysisService = textAnalysisService
+        self.multimodalService = multimodalService
     }
 
     func startAnalysis() async {
@@ -47,10 +54,15 @@ final class PoseAnalysisViewModel: ObservableObject {
             angles = result.angle
             annotatedImage = SkeletonRenderer.render(image: image, points: points)
 
+            // 多模态模型：生成边缘+骨骼合成图
+            if aiModel == .zhipu {
+                edgeCompositeImage = EdgeDetector.composite(image: image, points: points)
+            }
+
             phase = .analyzing
             if let angles {
                 do {
-                    report = try await analysisService.analyze(angles: angles)
+                    report = try await analyze(angles: angles, points: points)
                 } catch {
                     report = nil
                 }
@@ -60,6 +72,18 @@ final class PoseAnalysisViewModel: ObservableObject {
         } catch let e {
             phase = .error
             error = "姿态检测失败：\(e.localizedDescription)"
+        }
+    }
+
+    private func analyze(angles: PoseAngle, points: [PosePoint]) async throws -> AnalysisReport {
+        switch aiModel {
+        case .deepseek:
+            return try await textAnalysisService.analyze(angles: angles)
+        case .zhipu:
+            let compositeImage = edgeCompositeImage
+                ?? EdgeDetector.composite(image: image, points: points)
+                ?? image
+            return try await multimodalService.analyze(image: compositeImage, angles: angles)
         }
     }
 }

@@ -65,17 +65,12 @@ enum SkeletonRenderer {
                 let color: UIColor = point.confidence > 0.6
                     ? UIColor.green.withAlphaComponent(0.9)
                     : UIColor.yellow.withAlphaComponent(0.8)
-                UIBezierPath(arcCenter: center, radius: radius, startAngle: 0, endAngle: .pi * 2, clockwise: true).fill()
+                let circle = UIBezierPath(arcCenter: center, radius: radius, startAngle: 0, endAngle: .pi * 2, clockwise: true)
+                color.setFill()
+                circle.fill()
             }
         }.cgImage!
 
         return UIImage(cgImage: annotatedCGImage, scale: image.scale, orientation: image.imageOrientation)
-    }
-}
-
-private extension UIBezierPath {
-    func fill() {
-        currentFillColor?.setFill()
-        super.fill()
     }
 }

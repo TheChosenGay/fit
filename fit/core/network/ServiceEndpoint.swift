@@ -15,4 +15,9 @@ enum ServiceEndpoint {
         private static let base = "https://api.deepseek.com"
         static let chatCompletions = URL(string: "\(base)/v1/chat/completions")!
     }
+
+    enum Zhipu {
+        private static let base = "https://open.bigmodel.cn/api/paas/v4"
+        static let chatCompletions = URL(string: "\(base)/chat/completions")!
+    }
 }
