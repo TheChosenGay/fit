@@ -2,15 +2,17 @@ import SwiftUI
 
 struct PoseAnalysisView: View {
     let image: UIImage
-    @State private var selectedModel: AIModel = .deepseek
+    @Environment(\.selectedAIModel) private var selectedModelBinding
     @StateObject private var viewModel: PoseAnalysisViewModel
     @Environment(\.dismiss) private var dismiss
 
     init(image: UIImage) {
         self.image = image
-        let model = AIModel.deepseek
-        _selectedModel = State(initialValue: model)
-        _viewModel = StateObject(wrappedValue: PoseAnalysisViewModel(image: image, aiModel: model))
+        _viewModel = StateObject(wrappedValue: PoseAnalysisViewModel(image: image, aiModel: .deepseek))
+    }
+
+    private var selectedModel: AIModel {
+        get { selectedModelBinding.wrappedValue }
     }
 
     var body: some View {
@@ -26,12 +28,7 @@ struct PoseAnalysisView: View {
                 errorView
             }
         }
-        .overlay(alignment: .topTrailing) {
-            DebugModelButton(selectedModel: $selectedModel)
-                .padding(.top, DSSpacing.huge)
-                .padding(.trailing, DSSpacing.md)
-        }
-        .onChange(of: selectedModel) { newModel in
+        .onChange(of: selectedModelBinding.wrappedValue) { newModel in
             viewModel.aiModel = newModel
             Task { await viewModel.startAnalysis() }
         }

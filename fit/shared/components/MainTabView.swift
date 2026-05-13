@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @State private var selectedModel: AIModel = .deepseek
+
     var body: some View {
         TabView {
             AppNavigationStack {
@@ -17,5 +19,11 @@ struct MainTabView: View {
                     Label("历史", systemImage: "clock")
                 }
         }
+        .overlay(alignment: .topTrailing) {
+            DebugModelButton(selectedModel: $selectedModel)
+                .padding(.top, DSSpacing.huge)
+                .padding(.trailing, DSSpacing.md)
+        }
+        .environment(\.selectedAIModel, $selectedModel)
     }
 }
