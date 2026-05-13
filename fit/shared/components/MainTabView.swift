@@ -9,7 +9,7 @@ struct MainTabView: View {
                     CameraView()
                 }
                 .tabItem {
-                    Image(uiImage: DSIconName.camera.uiImage()).renderingMode(.template)
+                    Image(uiImage: DSIconName.camera.uiImage(size: 28, weight: .bold))
                     Text("分析")
                 }
 
@@ -17,7 +17,7 @@ struct MainTabView: View {
                     HistoryView()
                 }
                 .tabItem {
-                    Image(uiImage: DSIconName.history.uiImage()).renderingMode(.template)
+                    Image(uiImage: DSIconName.history.uiImage(size: 28, weight: .bold))
                     Text("历史")
                 }
         }
