@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Icon Weight
 
@@ -196,6 +197,23 @@ private struct DSIconShape: Shape {
         path.addLine(to: CGPoint(x: 12*s, y: 14*s))
         path.move(to: CGPoint(x: 12*s, y: 17*s))
         path.addLine(to: CGPoint(x: 12*s, y: 17.1*s))
+    }
+}
+
+// MARK: - Render to UIImage (for tabItem, etc.)
+
+extension DSIconName {
+    func uiImage(size: CGFloat = 24, weight: DSIconWeight = .regular) -> UIImage {
+        let rect = CGRect(origin: .zero, size: CGSize(width: size, height: size))
+        let renderer = UIGraphicsImageRenderer(size: rect.size)
+        return renderer.image { ctx in
+            let path = DSIconShape(name: self).path(in: rect)
+            ctx.cgContext.setLineWidth(weight.rawValue)
+            ctx.cgContext.setLineCap(.round)
+            ctx.cgContext.setLineJoin(.round)
+            ctx.cgContext.addPath(path.cgPath)
+            ctx.cgContext.strokePath()
+        }.withRenderingMode(.alwaysTemplate)
     }
 }
 

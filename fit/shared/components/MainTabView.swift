@@ -9,14 +9,16 @@ struct MainTabView: View {
                     CameraView()
                 }
                 .tabItem {
-                    Label("分析", systemImage: "camera")
+                    Image(uiImage: DSIconName.camera.uiImage()).renderingMode(.template)
+                    Text("分析")
                 }
 
             AppNavigationStack {
                     HistoryView()
                 }
                 .tabItem {
-                    Label("历史", systemImage: "clock")
+                    Image(uiImage: DSIconName.history.uiImage()).renderingMode(.template)
+                    Text("历史")
                 }
         }
         .overlay(alignment: .topTrailing) {
