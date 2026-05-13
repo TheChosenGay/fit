@@ -1,25 +1,27 @@
 import AVFoundation
 import UIKit
 
-// MARK: - CameraSession
-// 封装 AVFoundation 相机核心逻辑：Session 配置、启动/停止、拍照
-// 标记为 @unchecked Sendable，AVCaptureSession 内部自己保证线程安全
 final class CameraSession: NSObject, @unchecked Sendable {
 
-    // 对外暴露的 session，供预览层绑定
     let session = AVCaptureSession()
 
     private let photoOutput = AVCapturePhotoOutput()
     private var photoContinuation: CheckedContinuation<UIImage, Error>?
 
+    private let videoDataOutput = AVCaptureVideoDataOutput()
+    var frameHandler: ((CMSampleBuffer) -> Void)?
+    private let videoQueue = DispatchQueue(label: "camera.video.frames", qos: .userInitiated)
+
+    private var currentPosition: AVCaptureDevice.Position = .back
+
     // MARK: - Setup
 
-    /// 配置相机输入输出
-    func configure() throws {
+    func configure(position: AVCaptureDevice.Position = .back) throws {
+        currentPosition = position
         session.beginConfiguration()
         session.sessionPreset = .photo
 
-        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position),
               let input = try? AVCaptureDeviceInput(device: device) else {
             session.commitConfiguration()
             throw CameraError.deviceUnavailable
@@ -37,10 +39,50 @@ final class CameraSession: NSObject, @unchecked Sendable {
         }
         session.addOutput(photoOutput)
 
+        if session.canAddOutput(videoDataOutput) {
+            session.addOutput(videoDataOutput)
+            videoDataOutput.setSampleBufferDelegate(self, queue: videoQueue)
+            videoDataOutput.alwaysDiscardsLateVideoFrames = true
+            videoDataOutput.videoSettings = [
+                kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
+            ]
+        }
+
         session.commitConfiguration()
+
+        if let connection = videoDataOutput.connection(with: .video),
+           connection.isVideoOrientationSupported {
+            connection.videoOrientation = .portrait
+        }
     }
 
-    // MARK: - Session 控制
+    // MARK: - Camera Flip
+
+    func switchCamera(to position: AVCaptureDevice.Position) throws {
+        session.beginConfiguration()
+
+        if let currentInput = session.inputs.first as? AVCaptureDeviceInput {
+            session.removeInput(currentInput)
+        }
+
+        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position),
+              let input = try? AVCaptureDeviceInput(device: device),
+              session.canAddInput(input) else {
+            session.commitConfiguration()
+            throw CameraError.deviceUnavailable
+        }
+
+        session.addInput(input)
+        currentPosition = position
+        session.commitConfiguration()
+
+        if let connection = videoDataOutput.connection(with: .video),
+           connection.isVideoOrientationSupported {
+            connection.videoOrientation = .portrait
+        }
+    }
+
+    // MARK: - Session Control
 
     func start() {
         guard !session.isRunning else { return }
@@ -52,9 +94,8 @@ final class CameraSession: NSObject, @unchecked Sendable {
         session.stopRunning()
     }
 
-    // MARK: - 拍照
+    // MARK: - Photo Capture
 
-    /// 拍照，async 返回 UIImage
     func capturePhoto() async throws -> UIImage {
         try await withCheckedThrowingContinuation { continuation in
             self.photoContinuation = continuation
@@ -87,7 +128,17 @@ extension CameraSession: AVCapturePhotoCaptureDelegate {
     }
 }
 
-// MARK: - CameraError
+// MARK: - AVCaptureVideoDataOutputSampleBufferDelegate
+extension CameraSession: AVCaptureVideoDataOutputSampleBufferDelegate {
+    func captureOutput(
+        _ output: AVCaptureOutput,
+        didOutput sampleBuffer: CMSampleBuffer,
+        from connection: AVCaptureConnection
+    ) {
+        frameHandler?(sampleBuffer)
+    }
+}
+
 enum CameraError: Error, LocalizedError {
     case deviceUnavailable
     case cannotAddInput
@@ -101,7 +152,7 @@ enum CameraError: Error, LocalizedError {
         case .cannotAddInput: return "无法添加相机输入"
         case .cannotAddOutput: return "无法添加照片输出"
         case .captureDataInvalid: return "照片数据无效"
-        case .permissionDenied: return "相机权限被拒绝，请在设置中开启"
+        case .permissionDenied: return "相机或相册权限被拒绝，请在设置中开启"
         }
     }
 }

@@ -8,7 +8,16 @@
       "Bash(security find-identity *)",
       "Bash(xcodebuild -project /Users/daishan/fit/fit/fit.xcodeproj -scheme fit -configuration Debug -sdk iphoneos -destination 'platform=iOS,id=00008103-000A310A3EC0001E' -allowProvisioningUpdates build)",
       "Bash(xcodebuild -project fit.xcodeproj -showBuildSettings)",
-      "Bash(xcodebuild -project fit.xcodeproj -scheme fit -destination 'platform=iOS Simulator,name=iPhone 16' build)"
+      "Bash(xcodebuild -project fit.xcodeproj -scheme fit -destination 'platform=iOS Simulator,name=iPhone 16' build)",
+      "Bash(chmod +x *)",
+      "Bash(./install.sh --init)",
+      "Bash(rm /Users/daishan/skill-repo/commands/biz/store-setup.md)",
+      "Bash(cp /Users/daishan/temp/skill-repo/commands/biz/store-setup.md /Users/daishan/skill-repo/commands/biz/store-setup.md)",
+      "Bash(rm /Users/daishan/skill-repo/commands/marketing/publish.md)",
+      "Bash(cp /Users/daishan/temp/skill-repo/commands/marketing/publish.md /Users/daishan/skill-repo/commands/marketing/publish.md)",
+      "WebSearch",
+      "Bash(xcodebuild -scheme fit -destination 'platform=iOS Simulator,name=iPhone 16' build)",
+      "Bash(xcodebuild -project fit.xcodeproj -scheme fit -destination 'generic/platform=iOS' build)"
     ]
   }
 }

@@ -14,6 +14,14 @@ struct MainTabView: View {
                 }
 
             AppNavigationStack {
+                    RealTimeCameraEntryView()
+                }
+                .tabItem {
+                    Image(uiImage: DSIconName.activity.uiImage(size: 28, weight: .bold))
+                    Text("训练")
+                }
+
+            AppNavigationStack {
                     HistoryView()
                 }
                 .tabItem {
