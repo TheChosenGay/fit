@@ -25,7 +25,7 @@ struct DebugModelButton: View {
     @State private var dragOffset = CGSize(width: -60, height: 0)
 
     var body: some View {
-        VStack(alignment: .trailing, spacing: 6) {
+        VStack(alignment: .trailing, spacing: DSSpacing.xs) {
             if expanded {
                 ForEach(AIModel.allCases) { model in
                     Button {
@@ -33,13 +33,13 @@ struct DebugModelButton: View {
                         expanded = false
                     } label: {
                         Text(model.rawValue)
-                            .font(.system(size: 12))
+                            .dsTextStyle(.caption1)
                             .foregroundColor(.white)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
+                            .padding(.horizontal, DSSpacing.xs)
+                            .padding(.vertical, DSSpacing.xxs)
                             .background(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(selectedModel == model ? Color.blue : Color.gray.opacity(0.7))
+                                RoundedRectangle(cornerRadius: DSCornerRadius.small)
+                                    .fill(selectedModel == model ? Color.dsPrimary : Color.dsLabelTertiary)
                             )
                     }
                 }
@@ -52,14 +52,14 @@ struct DebugModelButton: View {
                     .font(.system(size: 18))
                     .foregroundColor(.white)
                     .frame(width: 36, height: 36)
-                    .background(Circle().fill(Color.blue.opacity(0.8)))
-                    .shadow(radius: 4)
+                    .background(Circle().fill(Color.dsPrimary.opacity(0.8)))
+                    .dsShadow(.subtle)
             }
         }
-        .padding(8)
+        .padding(DSSpacing.xs)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.black.opacity(expanded ? 0.6 : 0))
+            RoundedRectangle(cornerRadius: DSCornerRadius.medium)
+                .fill(Color.dsBackground.opacity(expanded ? 0.6 : 0))
         )
         .offset(dragOffset)
         .gesture(

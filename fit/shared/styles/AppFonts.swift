@@ -1,9 +1,10 @@
 import SwiftUI
 
-// MARK: - App Font Tokens
+// MARK: - Legacy App Font Aliases → DesignSystem
+
 extension Font {
-    static let appTitle = Font.system(size: 24, weight: .bold)
-    static let appHeadline = Font.system(size: 18, weight: .semibold)
-    static let appBody = Font.system(size: 16, weight: .regular)
-    static let appCaption = Font.system(size: 13, weight: .regular)
+    static let appTitle = DSTextStyle.title1.font
+    static let appHeadline = DSTextStyle.headline.font
+    static let appBody = DSTextStyle.body.font
+    static let appCaption = DSTextStyle.footnote.font
 }

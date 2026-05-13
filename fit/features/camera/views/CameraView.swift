@@ -76,7 +76,7 @@ struct CameraView: View {
         }
     }
 
-    // MARK: - 底部控制栏：相册 + 快门
+    // MARK: - 底部控制栏
     private var shutterBar: some View {
         HStack {
             Button {
@@ -109,23 +109,23 @@ struct CameraView: View {
 
             Color.clear.frame(width: 60, height: 60)
         }
-        .padding(.horizontal, 32)
-        .padding(.vertical, 24)
+        .padding(.horizontal, DSSpacing.xxl)
+        .padding(.vertical, DSSpacing.xl)
     }
 
     // MARK: - 权限被拒
     private var permissionDeniedView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: DSSpacing.md) {
             Image(systemName: "camera.fill")
                 .font(.system(size: 48))
-                .foregroundColor(.secondary)
+                .foregroundColor(.dsLabelSecondary)
             Text("需要相机权限")
-                .font(.appHeadline)
+                .dsTextStyle(.headline)
             Text("请前往「设置 → PostureAI → 相机」开启权限")
-                .font(.appBody)
-                .foregroundColor(.secondary)
+                .dsTextStyle(.body)
+                .foregroundColor(.dsLabelSecondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
+                .padding(.horizontal, DSSpacing.xxl)
             Button("前往设置") {
                 guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
                 UIApplication.shared.open(url)

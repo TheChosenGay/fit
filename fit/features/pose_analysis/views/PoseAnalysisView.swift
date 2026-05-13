@@ -15,7 +15,7 @@ struct PoseAnalysisView: View {
 
     var body: some View {
         ZStack {
-            Color(.systemGroupedBackground).ignoresSafeArea()
+            Color.dsBackgroundSecondary.ignoresSafeArea()
 
             switch viewModel.phase {
             case .detecting, .analyzing:
@@ -28,11 +28,10 @@ struct PoseAnalysisView: View {
         }
         .overlay(alignment: .topTrailing) {
             DebugModelButton(selectedModel: $selectedModel)
-                .padding(.top, 60)
-                .padding(.trailing, 16)
+                .padding(.top, DSSpacing.huge)
+                .padding(.trailing, DSSpacing.md)
         }
         .onChange(of: selectedModel) { newModel in
-            // Model changed, re-run analysis
             viewModel.aiModel = newModel
             Task { await viewModel.startAnalysis() }
         }
@@ -45,15 +44,15 @@ struct PoseAnalysisView: View {
     // MARK: - Loading
 
     private var loadingView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: DSSpacing.md) {
             ProgressView()
                 .scaleEffect(1.2)
             Text(viewModel.phase == .detecting ? "正在检测姿态..." : "正在 AI 分析...")
-                .font(.appBody)
-                .foregroundColor(.secondary)
+                .dsTextStyle(.body)
+                .foregroundColor(.dsLabelSecondary)
             Text("模型: \(selectedModel.rawValue)")
-                .font(.appCaption)
-                .foregroundColor(.secondary)
+                .dsTextStyle(.footnote)
+                .foregroundColor(.dsLabelSecondary)
         }
     }
 
@@ -61,24 +60,23 @@ struct PoseAnalysisView: View {
 
     private var resultView: some View {
         ScrollView {
-            VStack(spacing: 20) {
-                // 多模态模型显示边缘合成图，否则显示骨骼标注图
+            VStack(spacing: DSSpacing.lg) {
                 if selectedModel == .zhipu || selectedModel == .minimax, let edgeImg = viewModel.edgeCompositeImage {
                     Image(uiImage: edgeImg)
                         .resizable()
                         .scaledToFit()
                         .frame(maxWidth: .infinity)
-                        .cornerRadius(12)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 16)
+                        .cornerRadius(DSCornerRadius.medium)
+                        .padding(.horizontal, DSSpacing.md)
+                        .padding(.top, DSSpacing.md)
                 } else if let annotatedImage = viewModel.annotatedImage {
                     Image(uiImage: annotatedImage)
                         .resizable()
                         .scaledToFit()
                         .frame(maxWidth: .infinity)
-                        .cornerRadius(12)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 16)
+                        .cornerRadius(DSCornerRadius.medium)
+                        .padding(.horizontal, DSSpacing.md)
+                        .padding(.top, DSSpacing.md)
                 }
 
                 angleSection
@@ -95,11 +93,11 @@ struct PoseAnalysisView: View {
     // MARK: - Angle cards
 
     private var angleSection: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: DSSpacing.sm) {
             Text("体态数据")
-                .font(.appHeadline)
+                .dsTextStyle(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 20)
+                .padding(.horizontal, DSSpacing.lg)
 
             if let angles = viewModel.angles {
                 AngleCard(
@@ -134,11 +132,11 @@ struct PoseAnalysisView: View {
     // MARK: - AI Report
 
     private func aiReportSection(_ report: AnalysisReport) -> some View {
-        VStack(spacing: 16) {
+        VStack(spacing: DSSpacing.md) {
             Text("AI 分析报告")
-                .font(.appHeadline)
+                .dsTextStyle(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 20)
+                .padding(.horizontal, DSSpacing.lg)
 
             overallScoreCard(score: report.overallScore)
 
@@ -151,101 +149,100 @@ struct PoseAnalysisView: View {
     }
 
     private func overallScoreCard(score: Int) -> some View {
-        HStack(spacing: 16) {
+        HStack(spacing: DSSpacing.md) {
             ZStack {
                 Circle()
                     .stroke(scoreColor(score).opacity(0.3), lineWidth: 6)
                     .frame(width: 64, height: 64)
                 Text("\(score)")
-                    .font(.system(size: 24, weight: .bold))
+                    .dsTextStyle(.title2)
                     .foregroundColor(scoreColor(score))
             }
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: DSSpacing.xxs) {
                 Text("综合评分")
-                    .font(.appHeadline)
+                    .dsTextStyle(.headline)
                 Text(score >= 80 ? "体态良好" : score >= 60 ? "存在一些问题" : "需要关注")
-                    .font(.appCaption)
-                    .foregroundColor(.secondary)
+                    .dsTextStyle(.footnote)
+                    .foregroundColor(.dsLabelSecondary)
             }
 
             Spacer()
         }
-        .padding(16)
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .padding(.horizontal, 16)
+        .padding(DSSpacing.md)
+        .background(Color.dsSurface)
+        .cornerRadius(DSCornerRadius.medium)
+        .padding(.horizontal, DSSpacing.md)
     }
 
     private func issueCard(_ issue: AnalysisReport.Issue) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: DSSpacing.xs) {
             HStack {
                 Text(issue.name)
-                    .font(.appBody)
-                    .fontWeight(.semibold)
+                    .dsTextStyle(.headline)
                 Spacer()
                 severityBadge(issue.severity)
             }
             Text(issue.description)
-                .font(.appCaption)
-                .foregroundColor(.secondary)
+                .dsTextStyle(.footnote)
+                .foregroundColor(.dsLabelSecondary)
                 .lineSpacing(2)
         }
-        .padding(16)
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .padding(.horizontal, 16)
+        .padding(DSSpacing.md)
+        .background(Color.dsSurface)
+        .cornerRadius(DSCornerRadius.medium)
+        .padding(.horizontal, DSSpacing.md)
     }
 
     private func summaryCard(_ text: String) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: DSSpacing.xs) {
             Image(systemName: "lightbulb.fill")
-                .foregroundColor(.yellow)
+                .foregroundColor(.dsWarning)
             Text(text)
-                .font(.appBody)
-                .foregroundColor(.secondary)
+                .dsTextStyle(.body)
+                .foregroundColor(.dsLabelSecondary)
             Spacer()
         }
-        .padding(16)
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .padding(.horizontal, 16)
+        .padding(DSSpacing.md)
+        .background(Color.dsSurface)
+        .cornerRadius(DSCornerRadius.medium)
+        .padding(.horizontal, DSSpacing.md)
     }
 
     private func severityBadge(_ severity: String) -> some View {
         let (label, color): (String, Color) = {
             switch severity {
-            case "severe": return ("明显", .red)
-            case "moderate": return ("中度", .orange)
-            case "mild": return ("轻度", .yellow)
-            default: return ("未知", .gray)
+            case "severe": return ("明显", .dsError)
+            case "moderate": return ("中度", .dsWarning)
+            case "mild": return ("轻度", .dsWarning.opacity(0.7))
+            default: return ("未知", .dsLabelTertiary)
             }
         }()
         return Text(label)
-            .font(.appCaption)
+            .dsTextStyle(.footnote)
             .foregroundColor(.white)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, DSSpacing.xs)
+            .padding(.vertical, DSSpacing.xxs)
             .background(color)
-            .cornerRadius(6)
+            .cornerRadius(DSCornerRadius.small)
     }
 
     private func scoreColor(_ score: Int) -> Color {
-        score >= 80 ? .green : score >= 60 ? .orange : .red
+        score >= 80 ? .dsSuccess : score >= 60 ? .dsWarning : .dsError
     }
 
     // MARK: - Error
 
     private var errorView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: DSSpacing.md) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 44))
-                .foregroundColor(.orange)
+                .foregroundColor(.dsWarning)
             Text(viewModel.error ?? "未知错误")
-                .font(.appBody)
-                .foregroundColor(.secondary)
+                .dsTextStyle(.body)
+                .foregroundColor(.dsLabelSecondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
+                .padding(.horizontal, DSSpacing.xxl)
             Button("重试") {
                 Task { await viewModel.startAnalysis() }
             }
@@ -264,31 +261,31 @@ private struct AngleCard: View {
     var body: some View {
         HStack {
             Text(label)
-                .font(.appBody)
-                .foregroundColor(.primary)
+                .dsTextStyle(.body)
+                .foregroundColor(.dsLabel)
             Spacer()
             if let value {
                 Text(value)
-                    .font(.appBody)
-                    .foregroundColor(.secondary)
+                    .dsTextStyle(.body)
+                    .foregroundColor(.dsLabelSecondary)
             } else {
                 Text("无数据")
-                    .font(.appCaption)
-                    .foregroundColor(.secondary)
+                    .dsTextStyle(.footnote)
+                    .foregroundColor(.dsLabelSecondary)
             }
             Text(severity.text)
-                .font(.appCaption)
+                .dsTextStyle(.footnote)
                 .foregroundColor(.white)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
+                .padding(.horizontal, DSSpacing.xs)
+                .padding(.vertical, DSSpacing.xxs)
                 .background(severity.color)
-                .cornerRadius(6)
+                .cornerRadius(DSCornerRadius.small)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
-        .background(Color(.systemBackground))
-        .cornerRadius(10)
-        .padding(.horizontal, 16)
+        .padding(.horizontal, DSSpacing.lg)
+        .padding(.vertical, DSSpacing.xs)
+        .background(Color.dsSurface)
+        .cornerRadius(DSCornerRadius.medium)
+        .padding(.horizontal, DSSpacing.md)
     }
 }
 
@@ -299,27 +296,27 @@ private enum AngleType {
 }
 
 private func severity(_ value: Float?, for type: AngleType) -> (text: String, color: Color) {
-    guard let value else { return ("无数据", .gray) }
+    guard let value else { return ("无数据", .dsLabelTertiary) }
     switch type {
     case .headForward:
-        if value <= 3 { return ("正常", .green) }
-        else if value <= 7 { return ("轻度", .yellow) }
-        else { return ("明显", .red) }
+        if value <= 3 { return ("正常", .dsSuccess) }
+        else if value <= 7 { return ("轻度", .dsWarning) }
+        else { return ("明显", .dsError) }
     case .shoulderDiff:
-        if value <= 30 { return ("正常", .green) }
-        else if value <= 60 { return ("轻度", .yellow) }
-        else { return ("明显", .red) }
+        if value <= 30 { return ("正常", .dsSuccess) }
+        else if value <= 60 { return ("轻度", .dsWarning) }
+        else { return ("明显", .dsError) }
     case .roundShoulder:
-        if value <= 3 { return ("正常", .green) }
-        else if value <= 7 { return ("轻度", .yellow) }
-        else { return ("明显", .red) }
+        if value <= 3 { return ("正常", .dsSuccess) }
+        else if value <= 7 { return ("轻度", .dsWarning) }
+        else { return ("明显", .dsError) }
     case .pelvicTilt:
-        if value <= 3 { return ("正常", .green) }
-        else if value <= 7 { return ("轻度", .yellow) }
-        else { return ("明显", .red) }
+        if value <= 3 { return ("正常", .dsSuccess) }
+        else if value <= 7 { return ("轻度", .dsWarning) }
+        else { return ("明显", .dsError) }
     case .legAlignment:
-        if value <= 25 { return ("正常", .green) }
-        else if value <= 45 { return ("轻度", .yellow) }
-        else { return ("明显", .red) }
+        if value <= 25 { return ("正常", .dsSuccess) }
+        else if value <= 45 { return ("轻度", .dsWarning) }
+        else { return ("明显", .dsError) }
     }
 }

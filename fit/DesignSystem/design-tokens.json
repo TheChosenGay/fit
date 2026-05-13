@@ -1,0 +1,88 @@
+{
+  "meta": {
+    "name": "TechPro Design System",
+    "description": "商务专业 + 科技未来感，冷色调，支持 Light/Dark",
+    "version": "1.0.0",
+    "created": "2026-05-13"
+  },
+  "colors": {
+    "primary":            { "light": "#0A6CFF", "dark": "#4D9AFF" },
+    "primaryVariant":     { "light": "#0052CC", "dark": "#6DB3FF" },
+    "secondary":          { "light": "#00B8D4", "dark": "#18DDEB" },
+    "secondaryVariant":   { "light": "#0097A7", "dark": "#4DE8F4" },
+    "background":         { "light": "#FFFFFF", "dark": "#0A0E1A" },
+    "backgroundSecondary":{ "light": "#F2F4F8", "dark": "#111827" },
+    "surface":            { "light": "#FFFFFF", "dark": "#1A2135" },
+    "surfaceSecondary":   { "light": "#F7F8FB", "dark": "#232B3E" },
+    "label":              { "light": "#111827", "dark": "#F1F5F9" },
+    "labelSecondary":     { "light": "#4B5563", "dark": "#94A3B8" },
+    "labelTertiary":      { "light": "#9CA3AF", "dark": "#64748B" },
+    "separator":          { "light": "#E2E8F0", "dark": "#2D3748" },
+    "fill":               { "light": "#0A6CFF", "dark": "#4D9AFF" },
+    "error":              { "light": "#DC2626", "dark": "#F87171" },
+    "success":            { "light": "#059669", "dark": "#34D399" },
+    "warning":            { "light": "#D97706", "dark": "#FBBF24" }
+  },
+  "typography": {
+    "largeTitle": { "fontSize": 34, "fontWeight": "bold",     "lineHeight": 41 },
+    "title1":     { "fontSize": 28, "fontWeight": "bold",     "lineHeight": 34 },
+    "title2":     { "fontSize": 22, "fontWeight": "bold",     "lineHeight": 28 },
+    "title3":     { "fontSize": 20, "fontWeight": "semibold", "lineHeight": 25 },
+    "headline":   { "fontSize": 17, "fontWeight": "semibold", "lineHeight": 22 },
+    "body":       { "fontSize": 17, "fontWeight": "regular",  "lineHeight": 22 },
+    "callout":    { "fontSize": 16, "fontWeight": "regular",  "lineHeight": 21 },
+    "subheadline":{ "fontSize": 15, "fontWeight": "regular",  "lineHeight": 20 },
+    "footnote":   { "fontSize": 13, "fontWeight": "regular",  "lineHeight": 18 },
+    "caption1":   { "fontSize": 12, "fontWeight": "regular",  "lineHeight": 16 },
+    "caption2":   { "fontSize": 11, "fontWeight": "regular",  "lineHeight": 13 }
+  },
+  "spacing": {
+    "xxs":  4,
+    "xs":   8,
+    "sm":   12,
+    "md":   16,
+    "lg":   20,
+    "xl":   24,
+    "xxl":  32,
+    "xxxl": 48,
+    "huge": 64
+  },
+  "cornerRadius": {
+    "small":   8,
+    "medium":  12,
+    "large":   16,
+    "xl":      20,
+    "capsule": 9999
+  },
+  "shadows": {
+    "subtle": {
+      "light": { "color": "rgba(15,23,42,0.06)", "x": 0, "y": 1, "blur": 3 },
+      "dark":  { "color": "rgba(0,0,0,0.20)",    "x": 0, "y": 1, "blur": 3 }
+    },
+    "medium": {
+      "light": { "color": "rgba(15,23,42,0.10)", "x": 0, "y": 2, "blur": 8 },
+      "dark":  { "color": "rgba(0,0,0,0.30)",    "x": 0, "y": 2, "blur": 8 }
+    },
+    "prominent": {
+      "light": { "color": "rgba(15,23,42,0.16)", "x": 0, "y": 4, "blur": 16 },
+      "dark":  { "color": "rgba(0,0,0,0.40)",    "x": 0, "y": 4, "blur": 16 }
+    }
+  },
+  "icons": {
+    "convention": "SF Symbols",
+    "recommendedWeight": "与文字 weight 保持一致",
+    "commonMappings": {
+      "add": "plus",
+      "delete": "trash",
+      "edit": "pencil",
+      "search": "magnifyingglass",
+      "settings": "gearshape",
+      "back": "chevron.left",
+      "forward": "chevron.right",
+      "close": "xmark",
+      "share": "square.and.arrow.up",
+      "favorite": "heart",
+      "favoriteFilled": "heart.fill"
+    }
+  }
+}
