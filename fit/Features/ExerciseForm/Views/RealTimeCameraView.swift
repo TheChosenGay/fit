@@ -7,6 +7,7 @@ import AVKit
 struct RealTimeCameraView: View {
     @StateObject private var viewModel = RealTimeCameraViewModel()
     @State private var showPlayer = false
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ZStack {
@@ -74,6 +75,13 @@ struct RealTimeCameraView: View {
                             ? (viewModel.detectedJoints != nil ? Color.green : Color.yellow)
                             : Color.gray)
                         .frame(width: 10, height: 10)
+
+                    // 关闭按钮
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
+                            .foregroundColor(.white.opacity(0.8))
+                    }
                 }
                 .padding()
                 .background(.ultraThinMaterial)
@@ -183,15 +191,16 @@ struct RealTimeCameraFallbackView: View {
 // MARK: - Version-adaptive entry
 
 struct RealTimeCameraEntryView: View {
+    @State private var showCamera = false
+
     var body: some View {
         if #available(iOS 17.0, *) {
             VStack(spacing: 24) {
                 Spacer()
 
-                // 实时摄像头检测
-                NavigationLink {
-                    RealTimeCameraView()
-                        .navigationBarHidden(true)
+                // 实时摄像头检测 — fullScreenCover 弹出，不和 NavigationStack 混用
+                Button {
+                    showCamera = true
                 } label: {
                     HStack(spacing: 16) {
                         Image(systemName: "camera.fill")
@@ -224,7 +233,7 @@ struct RealTimeCameraEntryView: View {
                     )
                 }
 
-                // 从视频分析
+                // 从视频分析 — NavigationLink 推入导航栈
                 NavigationLink {
                     VideoAnalysisView()
                 } label: {
@@ -263,6 +272,9 @@ struct RealTimeCameraEntryView: View {
             }
             .padding(.horizontal, DSSpacing.lg)
             .background(Color.dsBackground.ignoresSafeArea())
+            .fullScreenCover(isPresented: $showCamera) {
+                RealTimeCameraView()
+            }
         } else {
             RealTimeCameraFallbackView()
         }
