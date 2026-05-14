@@ -7,7 +7,7 @@ import AVFoundation
 @available(iOS 17.0, *)
 final class PoseFrameProcessor: @unchecked Sendable {
 
-    private let detector = BodyPoseDetector.detector
+    private let detector: BodyPoseDetectService
     private let processQueue = DispatchQueue(label: "pose.frame.processor", qos: .userInitiated)
 
     private var frameCount: Int = 0
@@ -16,6 +16,15 @@ final class PoseFrameProcessor: @unchecked Sendable {
 
     var onPoseDetected: (@MainActor @Sendable (BodyJoints) -> Void)?
     var onPoseLost: (@MainActor @Sendable () -> Void)?
+
+    init(backend: PoseDetectorBackend = .rtmPose) {
+        switch backend {
+        case .appleVision:
+            self.detector = BodyPoseDetector.detector
+        case .rtmPose:
+            self.detector = RTMPoseDetector.detector
+        }
+    }
 
     // Recording
     private var recorder: PoseVideoRecorder?

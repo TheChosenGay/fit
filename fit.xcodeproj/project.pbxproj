@@ -264,6 +264,8 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "访问相机，拍摄体态照片进行分析";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "访问麦克风以识别语音指令";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "语音识别用于将语音指令转换为文字";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "保存录制的姿态检测视频到相册";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -310,6 +312,8 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "访问相机，拍摄体态照片进行分析";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "访问麦克风以识别语音指令";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "语音识别用于将语音指令转换为文字";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "保存录制的姿态检测视频到相册";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;

@@ -10,15 +10,21 @@ import Photos
 final class RealTimeCameraViewModel: ObservableObject {
 
     let cameraSession = CameraSession()
-    private let frameProcessor = PoseFrameProcessor()
+    private var frameProcessor: PoseFrameProcessor
     private let controlQueue = DispatchQueue(label: "camera.control")
 
+    @Published var poseBackend: PoseDetectorBackend = .rtmPose
     @Published var detectedJoints: BodyJoints?
     @Published var isDetecting = false
     @Published var isFrontCamera = false
     @Published var jointNames: [String] = []
     @Published var errorMessage: String?
     @Published var recordedVideoURL: URL?
+
+    init(backend: PoseDetectorBackend = .rtmPose) {
+        self.poseBackend = backend
+        self.frameProcessor = PoseFrameProcessor(backend: backend)
+    }
 
     func setupCamera() throws {
         controlQueue.sync {}

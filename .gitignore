@@ -1,1 +1,11 @@
 Secrets.swift
+
+# CoreML models (too large for git)
+*.mlpackage
+*.mlmodel
+*.mlmodelc
+
+# Model conversion artifacts
+ModelConvert/Cache/
+ModelConvert/Output/
+ModelConvert/.venv/

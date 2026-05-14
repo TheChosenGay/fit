@@ -23,6 +23,7 @@ struct DebugModelButton: View {
     @Binding var selectedModel: AIModel
     @State private var expanded = false
     @State private var showDesignSystem = false
+    @State private var showSpeechTest = false
     @State private var position = CGPoint(x: -60, y: 0)
     @State private var dragStart: CGPoint?
 
@@ -59,6 +60,23 @@ struct DebugModelButton: View {
                     )
                     .onTapGesture {
                         showDesignSystem = true
+                        withAnimation(.easeInOut(duration: 0.2)) { expanded = false }
+                    }
+
+                Divider()
+                    .frame(width: 40)
+                    .background(Color.white.opacity(0.3))
+
+                Image(systemName: "waveform.circle.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(.white)
+                    .frame(width: 28, height: 28)
+                    .background(
+                        RoundedRectangle(cornerRadius: DSCornerRadius.small)
+                            .fill(Color.dsSuccess)
+                    )
+                    .onTapGesture {
+                        showSpeechTest = true
                         withAnimation(.easeInOut(duration: 0.2)) { expanded = false }
                     }
             }
@@ -102,6 +120,9 @@ struct DebugModelButton: View {
                         }
                     }
             }
+        }
+        .sheet(isPresented: $showSpeechTest) {
+            SpeechTestView()
         }
     }
 }

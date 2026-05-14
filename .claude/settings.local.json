@@ -17,7 +17,22 @@
       "Bash(cp /Users/daishan/temp/skill-repo/commands/marketing/publish.md /Users/daishan/skill-repo/commands/marketing/publish.md)",
       "WebSearch",
       "Bash(xcodebuild -scheme fit -destination 'platform=iOS Simulator,name=iPhone 16' build)",
-      "Bash(xcodebuild -project fit.xcodeproj -scheme fit -destination 'generic/platform=iOS' build)"
+      "Bash(xcodebuild -project fit.xcodeproj -scheme fit -destination 'generic/platform=iOS' build)",
+      "Bash(xargs ls -la)",
+      "Bash(pip3 --version)",
+      "Bash(conda --version)",
+      "Bash(pip3 list *)",
+      "Read(//Library/Frameworks/Python.framework/Versions/**)",
+      "Read(//usr/local/bin/**)",
+      "Read(//opt/homebrew/bin/**)",
+      "Bash(brew list *)",
+      "Bash(pyenv versions *)",
+      "Bash(pip3 install *)",
+      "Bash(brew --version)",
+      "Bash(brew install *)",
+      "Bash(xcodebuild build *)",
+      "Bash(python3 *)",
+      "Bash(xcodebuild -project fit.xcodeproj -scheme fit -destination 'generic/platform=iOS' -quiet build)"
     ]
   }
 }

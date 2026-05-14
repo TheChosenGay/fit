@@ -2,6 +2,8 @@ import Foundation
 import simd
 import CoreMedia
 
+extension CMSampleBuffer: @unchecked @retroactive Sendable {}
+
 // MARK: - BodyJoint (combined 2D + 3D)
 
 struct BodyJoint {

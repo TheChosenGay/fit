@@ -23,16 +23,24 @@ final class PoseAnalysisViewModel: ObservableObject {
         case error
     }
 
+    private static var defaultDetector: PoseDetectService {
+        if #available(iOS 17.0, *) {
+            return RTMPoseDetector.detector
+        } else {
+            return VisionPoseDetector.detector
+        }
+    }
+
     init(
         image: UIImage,
         aiModel: AIModel = .deepseek,
-        poseDetector: PoseDetectService = VisionPoseDetector.detector,
+        poseDetector: PoseDetectService? = nil,
         textAnalysisService: PoseAnalysisService = AIAnalysisService.shared,
         multimodalService: MultimodalAnalysisService = ZhipuVisionService.shared
     ) {
         self.image = image
         self.aiModel = aiModel
-        self.poseDetector = poseDetector
+        self.poseDetector = poseDetector ?? Self.defaultDetector
         self.textAnalysisService = textAnalysisService
         self.multimodalService = multimodalService
     }

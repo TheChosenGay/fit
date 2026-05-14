@@ -12,6 +12,13 @@ Do NOT nest NavigationStack inside individual pages. The NavigationStack lives a
 - Service layer: protocol abstraction (e.g., PoseDetectService), with concrete implementations in core/
 - Vision framework isolation: feature layer models (PosePoint, PoseAngle) use String types, not Vision types
 
+## Pose Detection
+
+- Phase 1 (current): Integrating RTMPose-WholeBody CoreML model for 133 2D keypoints (body 17 + feet 6 + hands 42 + face 68)
+- Phase 2 (planned): Dual-model — RTMPose 133-point 2D + Apple Vision 19-point 3D, aligned via shared joints
+- Conversion pipeline: PyTorch (.pth) → ONNX (.onnx) → CoreML (.mlpackage)
+- Feature layer keeps String-typed joint names — no CoreML/Vision types leak into features
+
 ## API
 
 - Endpoints centralized in ServiceEndpoint.swift (core/network/)
