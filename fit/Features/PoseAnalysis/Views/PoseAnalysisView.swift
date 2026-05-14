@@ -1,10 +1,16 @@
 import SwiftUI
+import SwiftData
+
+@available(iOS 17.0, *)
+
 
 struct PoseAnalysisView: View {
     let image: UIImage
     @Environment(\.selectedAIModel) private var selectedModelBinding
+    @Environment(\.modelContext) private var modelContext
     @StateObject private var viewModel: PoseAnalysisViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var didSave = false
 
     init(image: UIImage) {
         self.image = image
@@ -32,10 +38,52 @@ struct PoseAnalysisView: View {
             viewModel.aiModel = newModel
             Task { await viewModel.startAnalysis() }
         }
+        .onChange(of: viewModel.phase) { phase in
+            if case .done = phase, !didSave {
+                didSave = true
+                saveAnalysisRecord()
+            }
+        }
         .task {
             guard viewModel.phase != .done else { return }
             await viewModel.startAnalysis()
         }
+    }
+
+    // MARK: - Persistence
+
+    private func saveAnalysisRecord() {
+        guard let angles = viewModel.angles, let report = viewModel.report else { return }
+
+        let record = PoseAnalysisRecord()
+        record.date = Date()
+        record.headForward = angles.headForward.flatMap { Double($0) }
+        record.shoulderDiff = angles.shoulderDiff.flatMap { Double($0) }
+        record.roundShoulder = angles.roundShoulder.flatMap { Double($0) }
+        record.pelvicTilt = angles.pelvicTilt.flatMap { Double($0) }
+        record.legAlignment = angles.legAlignment.flatMap { Double($0) }
+        record.overallScore = report.overallScore
+        record.summary = report.summary
+        record.aiModelUsed = selectedModel.rawValue
+
+        for issue in report.issues {
+            let poseIssue = PoseIssue()
+            poseIssue.name = issue.name
+            poseIssue.severity = issue.severity
+            poseIssue.issueDescription = issue.description
+            poseIssue.score = issue.score
+            record.issues?.append(poseIssue)
+        }
+
+        // Save annotated image
+        if let annotated = viewModel.annotatedImage {
+            if let fileName = try? LocalPhotoStorageService().save(image: annotated) {
+                record.imageFileName = fileName
+            }
+        }
+
+        modelContext.insert(record)
+        try? modelContext.save()
     }
 
     // MARK: - Loading

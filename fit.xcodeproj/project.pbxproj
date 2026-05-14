@@ -8,10 +8,12 @@
 
 /* Begin PBXBuildFile section */
 		19AECFCB2FB19C3900EBB2DF /* LookinServer in Frameworks */ = {isa = PBXBuildFile; productRef = 19AECFCA2FB19C3900EBB2DF /* LookinServer */; };
+		8A07F306C04549B897EC889D /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 926F490F4A0546E28E4E6934 /* HealthKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		19AECF552FAE35A300EBB2DF /* fit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = fit.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		926F490F4A0546E28E4E6934 /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -27,6 +29,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8A07F306C04549B897EC889D /* HealthKit.framework in Frameworks */,
 				19AECFCB2FB19C3900EBB2DF /* LookinServer in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -39,6 +42,7 @@
 			children = (
 				19AECF572FAE35A300EBB2DF /* fit */,
 				19AECF562FAE35A300EBB2DF /* Products */,
+				19AED37D2FB5FAC600EBB2DF /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -48,6 +52,14 @@
 				19AECF552FAE35A300EBB2DF /* fit.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		19AED37D2FB5FAC600EBB2DF /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				926F490F4A0546E28E4E6934 /* HealthKit.framework */,
+			);
+			name = "Recovered References";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -264,6 +276,8 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "访问相机，拍摄体态照片进行分析";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "访问健康数据用于AI私教提供个性化训练和饮食建议";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "更新健康数据以记录体重和训练消耗";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "访问麦克风以识别语音指令";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "保存录制的姿态检测视频到相册";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "语音识别用于将语音指令转换为文字";
@@ -312,6 +326,8 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "访问相机，拍摄体态照片进行分析";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "访问健康数据用于AI私教提供个性化训练和饮食建议";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "更新健康数据以记录体重和训练消耗";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "访问麦克风以识别语音指令";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "保存录制的姿态检测视频到相册";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "语音识别用于将语音指令转换为文字";

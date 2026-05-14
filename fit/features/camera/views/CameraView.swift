@@ -49,7 +49,9 @@ struct CameraView: View {
         }
         .navigationDestination(isPresented: $showAnalysis) {
             if let image = analysisImage {
-                PoseAnalysisView(image: image)
+                if #available(iOS 17.0, *) {
+                    PoseAnalysisView(image: image)
+                }
             }
         }
         .onChange(of: showAnalysis) { isPresented in
