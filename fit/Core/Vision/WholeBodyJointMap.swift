@@ -116,4 +116,66 @@ enum WholeBodyJointMap {
             PosePoint(joint: $0.joint, location: $0.location2D, confidence: $0.confidence)
         }
     }
+
+    // MARK: - Renderable mapping (body legacy + feet + hands, skip face)
+
+    private static let faceRange = 23...90
+
+    static func mapToRenderable(_ joints: BodyJoints) -> BodyJoints {
+        let dict = Dictionary(joints.map { ($0.joint, $0) }, uniquingKeysWith: { a, _ in a })
+        var result = BodyJoints()
+
+        // Body 17 → legacy names
+        for (extendedName, legacyName) in legacyMapping {
+            guard let j = dict[extendedName] else { continue }
+            result.append(BodyJoint(
+                joint: legacyName,
+                location2D: j.location2D,
+                position3D: j.position3D,
+                confidence: j.confidence
+            ))
+        }
+
+        // Synthesize neck_1_joint
+        if let ls = dict["left_shoulder"], let rs = dict["right_shoulder"] {
+            result.append(BodyJoint(
+                joint: "neck_1_joint",
+                location2D: CGPoint(
+                    x: (ls.location2D.x + rs.location2D.x) / 2,
+                    y: (ls.location2D.y + rs.location2D.y) / 2
+                ),
+                position3D: nil,
+                confidence: min(ls.confidence, rs.confidence)
+            ))
+        }
+
+        // Synthesize root
+        if let lh = dict["left_hip"], let rh = dict["right_hip"] {
+            result.append(BodyJoint(
+                joint: "root",
+                location2D: CGPoint(
+                    x: (lh.location2D.x + rh.location2D.x) / 2,
+                    y: (lh.location2D.y + rh.location2D.y) / 2
+                ),
+                position3D: nil,
+                confidence: min(lh.confidence, rh.confidence)
+            ))
+        }
+
+        // Feet + Hands: keep canonical names, skip face (indices 23-90)
+        for j in joints {
+            guard let idx = names.firstIndex(of: j.joint) else { continue }
+            if idx >= 17 && !faceRange.contains(idx) {
+                result.append(j)
+            }
+        }
+
+        return result
+    }
+
+    static func filterToRenderablePosePoints(_ joints: BodyJoints) -> PosePoints {
+        mapToRenderable(joints).map {
+            PosePoint(joint: $0.joint, location: $0.location2D, confidence: $0.confidence)
+        }
+    }
 }

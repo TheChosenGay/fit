@@ -193,8 +193,8 @@ extension RTMPoseDetector: BodyPoseDetectService {
             personBBox: bbox, fullWidth: fullW, fullHeight: fullH
         )
 
-        let legacyJoints = WholeBodyJointMap.filterToLegacyBody(allJoints)
-        return legacyJoints.isEmpty ? nil : legacyJoints
+        let renderableJoints = WholeBodyJointMap.mapToRenderable(allJoints)
+        return renderableJoints.isEmpty ? nil : renderableJoints
     }
 }
 
@@ -228,7 +228,7 @@ extension RTMPoseDetector: PoseDetectService {
             personBBox: bbox, fullWidth: w, fullHeight: h
         )
 
-        let legacyPoints = WholeBodyJointMap.filterToLegacyPosePoints(allJoints)
-        return legacyPoints.isEmpty ? nil : legacyPoints
+        let renderablePoints = WholeBodyJointMap.filterToRenderablePosePoints(allJoints)
+        return renderablePoints.isEmpty ? nil : renderablePoints
     }
 }

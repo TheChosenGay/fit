@@ -6,6 +6,7 @@ import AVFoundation
 struct Skeleton3DRenderer {
 
     private static let connections: [(String, String)] = [
+        // Body (13)
         ("neck_1_joint", "root"),
         ("neck_1_joint", "left_shoulder_1_joint"),
         ("neck_1_joint", "right_shoulder_1_joint"),
@@ -19,6 +20,25 @@ struct Skeleton3DRenderer {
         ("left_leg_joint", "left_foot_joint"),
         ("right_upLeg_joint", "right_leg_joint"),
         ("right_leg_joint", "right_foot_joint"),
+        // Feet (6)
+        ("left_foot_joint", "left_heel"),
+        ("left_heel", "left_big_toe"),
+        ("left_heel", "left_small_toe"),
+        ("right_foot_joint", "right_heel"),
+        ("right_heel", "right_big_toe"),
+        ("right_heel", "right_small_toe"),
+        // Left hand (20)
+        ("left_hand_joint", "left_thumb_1"), ("left_thumb_1", "left_thumb_2"), ("left_thumb_2", "left_thumb_3"), ("left_thumb_3", "left_thumb_4"),
+        ("left_hand_joint", "left_index_1"), ("left_index_1", "left_index_2"), ("left_index_2", "left_index_3"), ("left_index_3", "left_index_4"),
+        ("left_hand_joint", "left_middle_1"), ("left_middle_1", "left_middle_2"), ("left_middle_2", "left_middle_3"), ("left_middle_3", "left_middle_4"),
+        ("left_hand_joint", "left_ring_1"), ("left_ring_1", "left_ring_2"), ("left_ring_2", "left_ring_3"), ("left_ring_3", "left_ring_4"),
+        ("left_hand_joint", "left_pinky_1"), ("left_pinky_1", "left_pinky_2"), ("left_pinky_2", "left_pinky_3"), ("left_pinky_3", "left_pinky_4"),
+        // Right hand (20)
+        ("right_hand_joint", "right_thumb_1"), ("right_thumb_1", "right_thumb_2"), ("right_thumb_2", "right_thumb_3"), ("right_thumb_3", "right_thumb_4"),
+        ("right_hand_joint", "right_index_1"), ("right_index_1", "right_index_2"), ("right_index_2", "right_index_3"), ("right_index_3", "right_index_4"),
+        ("right_hand_joint", "right_middle_1"), ("right_middle_1", "right_middle_2"), ("right_middle_2", "right_middle_3"), ("right_middle_3", "right_middle_4"),
+        ("right_hand_joint", "right_ring_1"), ("right_ring_1", "right_ring_2"), ("right_ring_2", "right_ring_3"), ("right_ring_3", "right_ring_4"),
+        ("right_hand_joint", "right_pinky_1"), ("right_pinky_1", "right_pinky_2"), ("right_pinky_2", "right_pinky_3"), ("right_pinky_3", "right_pinky_4"),
     ]
 
     private static let jointLabels: [String: String] = [

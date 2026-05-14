@@ -32,7 +32,9 @@
       "Bash(brew install *)",
       "Bash(xcodebuild build *)",
       "Bash(python3 *)",
-      "Bash(xcodebuild -project fit.xcodeproj -scheme fit -destination 'generic/platform=iOS' -quiet build)"
+      "Bash(xcodebuild -project fit.xcodeproj -scheme fit -destination 'generic/platform=iOS' -quiet build)",
+      "Bash(xargs cat)",
+      "Bash(xcodebuild -project fit.xcodeproj -scheme fit -destination 'platform=iOS Simulator,name=iPhone 16 Pro' build)"
     ]
   }
 }

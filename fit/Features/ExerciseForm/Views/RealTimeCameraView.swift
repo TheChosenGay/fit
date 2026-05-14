@@ -185,7 +185,84 @@ struct RealTimeCameraFallbackView: View {
 struct RealTimeCameraEntryView: View {
     var body: some View {
         if #available(iOS 17.0, *) {
-            RealTimeCameraView()
+            VStack(spacing: 24) {
+                Spacer()
+
+                // 实时摄像头检测
+                NavigationLink {
+                    RealTimeCameraView()
+                        .navigationBarHidden(true)
+                } label: {
+                    HStack(spacing: 16) {
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 32))
+                            .foregroundColor(.dsPrimary)
+                            .frame(width: 56, height: 56)
+                            .background(
+                                RoundedRectangle(cornerRadius: DSCornerRadius.medium)
+                                    .fill(Color.dsPrimary.opacity(0.15))
+                            )
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("实时摄像头检测")
+                                .dsTextStyle(.body)
+                                .foregroundColor(.white)
+                            Text("打开摄像头，实时检测并录制骨骼姿态")
+                                .dsTextStyle(.caption1)
+                                .foregroundColor(.white.opacity(0.5))
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.white.opacity(0.3))
+                    }
+                    .padding(DSSpacing.md)
+                    .background(
+                        RoundedRectangle(cornerRadius: DSCornerRadius.medium)
+                            .fill(Color.white.opacity(0.08))
+                    )
+                }
+
+                // 从视频分析
+                NavigationLink {
+                    VideoAnalysisView()
+                } label: {
+                    HStack(spacing: 16) {
+                        Image(systemName: "video.fill")
+                            .font(.system(size: 32))
+                            .foregroundColor(.dsSuccess)
+                            .frame(width: 56, height: 56)
+                            .background(
+                                RoundedRectangle(cornerRadius: DSCornerRadius.medium)
+                                    .fill(Color.dsSuccess.opacity(0.15))
+                            )
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("从视频分析")
+                                .dsTextStyle(.body)
+                                .foregroundColor(.white)
+                            Text("选择已有视频，逐帧检测骨骼并生成分析结果")
+                                .dsTextStyle(.caption1)
+                                .foregroundColor(.white.opacity(0.5))
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.white.opacity(0.3))
+                    }
+                    .padding(DSSpacing.md)
+                    .background(
+                        RoundedRectangle(cornerRadius: DSCornerRadius.medium)
+                            .fill(Color.white.opacity(0.08))
+                    )
+                }
+
+                Spacer()
+            }
+            .padding(.horizontal, DSSpacing.lg)
+            .background(Color.dsBackground.ignoresSafeArea())
         } else {
             RealTimeCameraFallbackView()
         }
