@@ -6,6 +6,17 @@ import SwiftData
 
 struct TrainingTabView: View {
     @State private var showCamera = false
+    @State private var showWorkout = false
+    @Query(filter: #Predicate<TrainingPlan> { $0.isActive }, sort: \TrainingPlan.createdAt, order: .reverse) private var activePlans: [TrainingPlan]
+
+    private var activePlan: TrainingPlan? { activePlans.first }
+
+    private var todaySession: PlannedSession? {
+        guard let plan = activePlan else { return nil }
+        let today = Calendar.current.component(.weekday, from: Date())
+        let adjusted = today == 1 ? 7 : today - 1
+        return plan.sessions?.first { $0.dayOfWeek == adjusted }
+    }
 
     var body: some View {
         ScrollView {
@@ -58,6 +69,52 @@ struct TrainingTabView: View {
                 }
                 .fullScreenCover(isPresented: $showCamera) {
                     RealTimeCameraView()
+                }
+
+                // Section: 实时训练
+                VStack(alignment: .leading, spacing: DSSpacing.sm) {
+                    Text("实时训练")
+                        .dsTextStyle(.body)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, DSSpacing.lg)
+
+                    entryCard(
+                        icon: "figure.strengthtraining.traditional",
+                        iconColor: .dsError,
+                        bgColor: Color.dsError.opacity(0.15),
+                        title: "AI 教练指导训练",
+                        subtitle: "实时摄像头追踪动作，AI 语音指导纠正",
+                        action: { showWorkout = true }
+                    )
+                    .padding(.horizontal, DSSpacing.lg)
+                }
+                .fullScreenCover(isPresented: $showWorkout) {
+                    WorkoutSessionView()
+                }
+
+                // Section: 训练计划
+                if let plan = activePlan {
+                    TrainingPlanCardView(plan: plan, todaySession: todaySession)
+                } else {
+                    VStack(alignment: .leading, spacing: DSSpacing.sm) {
+                        Text("训练计划")
+                            .dsTextStyle(.body)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, DSSpacing.lg)
+
+                        NavigationLink {
+                            TrainingPlanGenerationView()
+                        } label: {
+                            entryCardContent(
+                                icon: "list.clipboard",
+                                iconColor: .dsSecondary,
+                                bgColor: Color.dsSecondary.opacity(0.15),
+                                title: "创建训练计划",
+                                subtitle: "AI 根据你的目标生成个性化周训练计划"
+                            )
+                        }
+                        .padding(.horizontal, DSSpacing.lg)
+                    }
                 }
 
                 // Section: 检测历史

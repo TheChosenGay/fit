@@ -1,0 +1,204 @@
+import Foundation
+
+// MARK: - Protocol
+
+@available(iOS 17.0, *)
+protocol AICoachService {
+    func dailyBriefing(context: CoachContext) async throws -> CoachBriefing
+    func realTimeFeedback(context: CoachContext, exerciseName: String, formScore: Int, recentReps: Int) async throws -> String
+    func weeklyReport(context: CoachContext, poseHistory: [PoseAnalysisRecord], workoutHistory: [WorkoutSession]) async throws -> CoachReport
+}
+
+// MARK: - DeepSeek implementation
+
+@available(iOS 17.0, *)
+final class DeepSeekAICoachService: AICoachService {
+    nonisolated static let shared = DeepSeekAICoachService()
+    private init() {}
+
+    // MARK: Daily briefing
+
+    func dailyBriefing(context: CoachContext) async throws -> CoachBriefing {
+        let systemPrompt = """
+        你是一位专业的AI健身私教，拥有用户完整的健康数据。用中文与用户交流，语气亲切专业。
+        用户数据会以结构化方式提供，请根据这些数据给出个性化建议。
+        """
+
+        let userPrompt = """
+        请根据以下用户数据，生成今日训练简报。返回严格JSON（不要markdown代码块标记）：
+
+        \(context.userContext)
+
+        返回格式：
+        {"greeting":"早上好！根据你昨天的训练情况...","health_summary":"今日已步行X步...","today_advice":"今天的训练重点是...","motivation_quote":"激励语"}
+        """
+
+        let request = DeepSeekRequest(
+            model: "deepseek-chat",
+            maxTokens: 1024,
+            messages: [
+                .init(role: "system", content: systemPrompt),
+                .init(role: "user", content: userPrompt),
+            ]
+        )
+
+        let body = try JSONEncoder().encode(request)
+        let headers = ["Authorization": "Bearer \(Secrets.deepseekAPIKey)"]
+
+        let response: DeepSeekResponse = try await NetworkService.shared.request(
+            url: ServiceEndpoint.DeepSeek.chatCompletions,
+            headers: headers,
+            body: body
+        )
+
+        guard let text = response.choices.first?.message.content else {
+            throw AIAnalysisError.emptyResponse
+        }
+
+        let jsonText = stripMarkdownCodeBlock(text)
+        guard let jsonData = jsonText.data(using: .utf8) else {
+            throw AIAnalysisError.invalidJSON
+        }
+
+        return try JSONDecoder().decode(CoachBriefing.self, from: jsonData)
+    }
+
+    // MARK: Real-time feedback
+
+    func realTimeFeedback(context: CoachContext, exerciseName: String, formScore: Int, recentReps: Int) async throws -> String {
+        let systemPrompt = "你是一位实时健身教练。给出简短的中文指导，严格控制在1-2句话以内，直接告诉用户如何调整动作。"
+
+        let userPrompt = """
+        用户当前数据：
+        \(context.userContext)
+
+        当前动作：\(exerciseName)
+        当前完成：\(recentReps) 次
+        动作评分：\(formScore)/100
+
+        请给出实时的简短指导（1-2句话），关注动作质量和安全。如果评分低于60，指出问题并给出纠正建议。如果评分80以上，给予鼓励。
+        只返回指导文字，不要JSON格式。
+        """
+
+        let request = DeepSeekRequest(
+            model: "deepseek-chat",
+            maxTokens: 200,
+            messages: [
+                .init(role: "system", content: systemPrompt),
+                .init(role: "user", content: userPrompt),
+            ]
+        )
+
+        let body = try JSONEncoder().encode(request)
+        let headers = ["Authorization": "Bearer \(Secrets.deepseekAPIKey)"]
+
+        let response: DeepSeekResponse = try await NetworkService.shared.request(
+            url: ServiceEndpoint.DeepSeek.chatCompletions,
+            headers: headers,
+            body: body
+        )
+
+        guard let text = response.choices.first?.message.content else {
+            throw AIAnalysisError.emptyResponse
+        }
+
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    // MARK: Weekly report
+
+    func weeklyReport(context: CoachContext, poseHistory: [PoseAnalysisRecord], workoutHistory: [WorkoutSession]) async throws -> CoachReport {
+        let systemPrompt = """
+        你是一位专业的AI健身私教。根据用户一周的训练和体态数据，生成周报。用中文回答，严格返回JSON格式。
+        """
+
+        let poseSummary = poseHistory.map { r in
+            "\(r.date.formatted(date: .abbreviated, time: .omitted)): 评分\(r.overallScore)"
+        }.joined(separator: ", ")
+
+        let workoutSummary = workoutHistory.map { s in
+            "\(s.date.formatted(date: .abbreviated, time: .omitted)): \(s.totalReps)次 评分\(s.averageFormScore)"
+        }.joined(separator: ", ")
+
+        let userPrompt = """
+        \(context.userContext)
+
+        本周体态记录：\(poseSummary)
+        本周训练记录：\(workoutSummary)
+
+        请返回严格JSON：
+        {"summary":"本周训练总结...","improvements":["改善点1","改善点2"],"recommendations":["建议1","建议2"]}
+        """
+
+        let request = DeepSeekRequest(
+            model: "deepseek-chat",
+            maxTokens: 1024,
+            messages: [
+                .init(role: "system", content: systemPrompt),
+                .init(role: "user", content: userPrompt),
+            ]
+        )
+
+        let body = try JSONEncoder().encode(request)
+        let headers = ["Authorization": "Bearer \(Secrets.deepseekAPIKey)"]
+
+        let response: DeepSeekResponse = try await NetworkService.shared.request(
+            url: ServiceEndpoint.DeepSeek.chatCompletions,
+            headers: headers,
+            body: body
+        )
+
+        guard let text = response.choices.first?.message.content else {
+            throw AIAnalysisError.emptyResponse
+        }
+
+        let jsonText = stripMarkdownCodeBlock(text)
+        guard let jsonData = jsonText.data(using: .utf8) else {
+            throw AIAnalysisError.invalidJSON
+        }
+
+        return try JSONDecoder().decode(CoachReport.self, from: jsonData)
+    }
+
+    // MARK: - Helpers
+
+    private func stripMarkdownCodeBlock(_ text: String) -> String {
+        var t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if t.hasPrefix("```") {
+            t = t.components(separatedBy: "\n").dropFirst().joined(separator: "\n")
+        }
+        if t.hasSuffix("```") {
+            t = String(t.dropLast(3)).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return t
+    }
+}
+
+// MARK: - DeepSeek API models
+
+private struct DeepSeekRequest: Encodable {
+    let model: String
+    let maxTokens: Int
+    let messages: [Message]
+
+    struct Message: Encodable {
+        let role: String
+        let content: String
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case model
+        case maxTokens = "max_tokens"
+        case messages
+    }
+}
+
+private struct DeepSeekResponse: Decodable {
+    struct Choice: Decodable {
+        struct Message: Decodable {
+            let content: String
+        }
+        let message: Message
+    }
+    let choices: [Choice]
+}

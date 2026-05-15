@@ -79,7 +79,11 @@ struct ProfileTabView: View {
                 VStack(spacing: 0) {
                     menuRow(icon: "person.fill", title: "编辑档案") { showEdit = true }
                     Divider().background(Color.white.opacity(0.1))
-                    menuRow(icon: "heart.text.square.fill", title: "健康状况")
+                    NavigationLink {
+                        HealthConditionsView()
+                    } label: {
+                        menuRowContent(icon: "heart.text.square.fill", title: "健康状况")
+                    }
                     Divider().background(Color.white.opacity(0.1))
                     menuRow(icon: "scalemass.fill", title: "体重历史")
                     Divider().background(Color.white.opacity(0.1))
@@ -125,20 +129,24 @@ struct ProfileTabView: View {
 
     private func menuRow(icon: String, title: String, action: (() -> Void)? = nil) -> some View {
         Button(action: { action?() }) {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.body)
-                    .foregroundColor(.dsPrimary)
-                    .frame(width: 24)
-                Text(title)
-                    .dsTextStyle(.body)
-                    .foregroundColor(.white)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .foregroundColor(.white.opacity(0.3))
-            }
-            .padding(DSSpacing.md)
+            menuRowContent(icon: icon, title: title)
         }
+    }
+
+    private func menuRowContent(icon: String, title: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.body)
+                .foregroundColor(.dsPrimary)
+                .frame(width: 24)
+            Text(title)
+                .dsTextStyle(.body)
+                .foregroundColor(.white)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .foregroundColor(.white.opacity(0.3))
+        }
+        .padding(DSSpacing.md)
     }
 
     private func goalLabel(_ goal: String) -> String {
