@@ -72,7 +72,10 @@ struct Skeleton3DRenderer {
         context: inout GraphicsContext,
         joints: BodyJoints,
         canvasSize: CGSize,
-        isFrontCamera: Bool = false
+        isFrontCamera: Bool = false,
+        color: Color = .green,
+        baseOpacity: Double = 1.0,
+        showLabels: Bool = true
     ) {
         let jointMap = buildJointMap(joints: joints, canvasSize: canvasSize, isFrontCamera: isFrontCamera)
 
@@ -80,26 +83,28 @@ struct Skeleton3DRenderer {
         for (a, b) in connections {
             guard let ja = jointMap[a], let jb = jointMap[b] else { continue }
             let midZ = (ja.z + jb.z) / 2
-            let opacity = depthOpacity(midZ)
+            let opacity = depthOpacity(midZ) * baseOpacity
             var path = Path()
             path.move(to: ja.point)
             path.addLine(to: jb.point)
-            context.stroke(path, with: .color(.green.opacity(opacity)),
+            context.stroke(path, with: .color(color.opacity(opacity)),
                           style: StrokeStyle(lineWidth: 3, lineCap: .round))
         }
 
         // Joint dots + labels
         for (name, data) in jointMap {
-            let opacity = depthOpacity(data.z)
+            let opacity = depthOpacity(data.z) * baseOpacity
             let r: CGFloat = 5
             let dotRect = CGRect(x: data.point.x - r, y: data.point.y - r, width: r*2, height: r*2)
-            context.fill(Path(ellipseIn: dotRect), with: .color(.green.opacity(opacity)))
+            context.fill(Path(ellipseIn: dotRect), with: .color(color.opacity(opacity)))
 
-            let label = jointLabels[name] ?? shortName(name)
-            let text = Text(label)
-                .font(.system(size: 11).bold())
-                .foregroundColor(.white.opacity(opacity))
-            context.draw(text, at: CGPoint(x: data.point.x + 8, y: data.point.y - 8), anchor: .leading)
+            if showLabels {
+                let label = jointLabels[name] ?? shortName(name)
+                let text = Text(label)
+                    .font(.system(size: 11).bold())
+                    .foregroundColor(.white.opacity(opacity))
+                context.draw(text, at: CGPoint(x: data.point.x + 8, y: data.point.y - 8), anchor: .leading)
+            }
         }
     }
 

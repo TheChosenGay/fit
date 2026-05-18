@@ -87,6 +87,19 @@ struct TrainingTabView: View {
                         action: { showWorkout = true }
                     )
                     .padding(.horizontal, DSSpacing.lg)
+
+                    NavigationLink {
+                        StandardSequenceListView()
+                    } label: {
+                        entryCardContent(
+                            icon: "figure.run.square.stack",
+                            iconColor: .blue,
+                            bgColor: Color.blue.opacity(0.15),
+                            title: "标准动作库",
+                            subtitle: "管理标准动作，教学演示或实时对比训练"
+                        )
+                    }
+                    .padding(.horizontal, DSSpacing.lg)
                 }
                 .fullScreenCover(isPresented: $showWorkout) {
                     WorkoutSessionView()

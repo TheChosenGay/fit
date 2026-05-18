@@ -27,6 +27,7 @@ final class DataContainer {
             TrainingPlan.self,
             PlannedSession.self,
             ProgressReport.self,
+            StandardSequenceCatalog.self,
         ])
         let config = ModelConfiguration(isStoredInMemoryOnly: false)
         let modelContainer: ModelContainer

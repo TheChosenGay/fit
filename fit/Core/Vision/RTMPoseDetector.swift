@@ -155,7 +155,7 @@ final class RTMPoseDetector {
     }
 
     // MARK: - CoreML Inference
-
+    // 核心预测逻辑
     private func predict(pixelBuffer: CVPixelBuffer) -> (simccX: MLMultiArray, simccY: MLMultiArray)? {
         guard let model = poseModel else { return nil }
 
@@ -178,9 +178,13 @@ final class RTMPoseDetector {
 extension RTMPoseDetector: BodyPoseDetectService {
 
     func detectBodyPose(from sampleBuffer: CMSampleBuffer) async throws -> BodyJoints? {
+        detectBodyPoseSync(from: sampleBuffer)
+    }
+
+    func detectBodyPoseSync(from sampleBuffer: CMSampleBuffer, orientation: CGImagePropertyOrientation = .up) -> BodyJoints? {
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return nil }
 
-        let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .up, options: [:])
+        let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: orientation, options: [:])
         guard let bbox = detectPersonBBox(handler: handler) else { return nil }
         guard let croppedBuffer = cropAndResize(pixelBuffer: pixelBuffer, bbox: bbox) else { return nil }
         guard let (simccX, simccY) = predict(pixelBuffer: croppedBuffer) else { return nil }
