@@ -28,6 +28,16 @@ struct StandardSequenceListView: View {
                 }
             }
         }
+        .navigationDestination(isPresented: $showTeaching) {
+            if let seq = selectedSequence {
+                ActionTeachingView(exerciseId: seq.exerciseId)
+            }
+        }
+        .navigationDestination(isPresented: $showComparison) {
+            if let seq = selectedSequence {
+                ComparisonSessionView(exerciseId: seq.exerciseId)
+            }
+        }
     }
 
     // MARK: - Empty State
@@ -116,15 +126,5 @@ struct StandardSequenceListView: View {
             RoundedRectangle(cornerRadius: DSCornerRadius.medium)
                 .fill(Color.white.opacity(0.08))
         )
-        .navigationDestination(isPresented: $showTeaching) {
-            if let seq = selectedSequence {
-                ActionTeachingView(exerciseId: seq.exerciseId)
-            }
-        }
-        .navigationDestination(isPresented: $showComparison) {
-            if let seq = selectedSequence {
-                ComparisonSessionView(exerciseId: seq.exerciseId)
-            }
-        }
     }
 }
