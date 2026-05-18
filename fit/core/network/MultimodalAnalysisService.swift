@@ -118,9 +118,9 @@ final class ZhipuVisionService: MultimodalAnalysisService {
         )
         let encoded = try JSONEncoder().encode(body)
         let response: MultimodalResponse = try await NetworkService.shared.request(
-            url: ServiceEndpoint.Zhipu.chatCompletions,
-            headers: ["Authorization": "Bearer \(Secrets.zhipuAPIKey)"],
-            body: encoded
+            endpoint: .zhipu,
+            body: encoded,
+            authKey: Secrets.zhipuAPIKey
         )
         guard let text = response.choices.first?.message.content else {
             throw AIAnalysisError.emptyResponse
@@ -150,9 +150,9 @@ final class MiniMaxVisionService: MultimodalAnalysisService {
         )
         let encoded = try JSONEncoder().encode(body)
         let response: MultimodalResponse = try await NetworkService.shared.request(
-            url: ServiceEndpoint.MiniMax.chatCompletions,
-            headers: ["Authorization": "Bearer \(Secrets.minimaxAPIKey)"],
-            body: encoded
+            endpoint: .minimax,
+            body: encoded,
+            authKey: Secrets.minimaxAPIKey
         )
         guard let text = response.choices.first?.message.content else {
             throw AIAnalysisError.emptyResponse

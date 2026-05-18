@@ -34,7 +34,9 @@
       "Bash(python3 *)",
       "Bash(xcodebuild -project fit.xcodeproj -scheme fit -destination 'generic/platform=iOS' -quiet build)",
       "Bash(xargs cat)",
-      "Bash(xcodebuild -project fit.xcodeproj -scheme fit -destination 'platform=iOS Simulator,name=iPhone 16 Pro' build)"
+      "Bash(xcodebuild -project fit.xcodeproj -scheme fit -destination 'platform=iOS Simulator,name=iPhone 16 Pro' build)",
+      "Bash(mkdir -p /Users/daishan/skill-knowledge)",
+      "Bash(cp /Users/daishan/skill-repo/commands/knowledge/test.md /Users/daishan/skill-knowledge/test.md)"
     ]
   }
 }

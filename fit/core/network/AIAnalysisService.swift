@@ -2,24 +2,12 @@ import Foundation
 
 final class AIAnalysisService: PoseAnalysisService {
     nonisolated static let shared = AIAnalysisService()
+    private let aiService = FitGenericAIService(type: .deepseek)
     private init() {}
 
     func analyze(angles: PoseAngle) async throws -> AnalysisReport {
-        let body = try JSONEncoder().encode(buildRequest(angles: angles))
-        let headers = [
-            "Authorization": "Bearer \(Secrets.deepseekAPIKey)",
-        ]
-
-        let response: DeepSeekResponse = try await NetworkService.shared.request(
-            url: ServiceEndpoint.DeepSeek.chatCompletions,
-            headers: headers,
-            body: body
-        )
-
-        guard let text = response.choices.first?.message.content else {
-            throw AIAnalysisError.emptyResponse
-        }
-
+        let request = buildRequest(angles: angles)
+        let text = try await aiService.query(req: request)
         let jsonText = stripMarkdownCodeBlock(text)
         guard let jsonData = jsonText.data(using: .utf8) else {
             throw AIAnalysisError.invalidJSON
@@ -28,7 +16,7 @@ final class AIAnalysisService: PoseAnalysisService {
         return try JSONDecoder().decode(AnalysisReport.self, from: jsonData)
     }
 
-    private func buildRequest(angles: PoseAngle) -> DeepSeekRequest {
+    private func buildRequest(angles: PoseAngle) -> FitAIRequest {
         let prompt = """
         你是一位专业的体态评估师。根据以下正面照检测数据（基于身体中轴线的相对测量），给出体态分析报告。只分析有数据支撑的问题，数据正常项可简要提及。
 
@@ -45,7 +33,7 @@ final class AIAnalysisService: PoseAnalysisService {
         {"issues":[{"name":"高低肩","severity":"moderate","description":"右肩明显高于左肩...","score":65}],"overall_score":72,"summary":"一句话总结"}
         """
 
-        return DeepSeekRequest(
+        return FitAIRequest(
             model: "deepseek-chat",
             maxTokens: 1024,
             messages: [

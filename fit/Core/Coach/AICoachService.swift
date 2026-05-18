@@ -15,7 +15,7 @@ protocol AICoachService {
 final class DeepSeekAICoachService: AICoachService {
     nonisolated static let shared = DeepSeekAICoachService()
     private init() {}
-
+    nonisolated let aiService = FitGenericAIService(type:.deepseek)
     // MARK: Daily briefing
 
     func dailyBriefing(context: CoachContext) async throws -> CoachBriefing {
@@ -33,7 +33,7 @@ final class DeepSeekAICoachService: AICoachService {
         {"greeting":"早上好！根据你昨天的训练情况...","health_summary":"今日已步行X步...","today_advice":"今天的训练重点是...","motivation_quote":"激励语"}
         """
 
-        let request = DeepSeekRequest(
+        let request = FitAIRequest(
             model: "deepseek-chat",
             maxTokens: 1024,
             messages: [
@@ -42,18 +42,7 @@ final class DeepSeekAICoachService: AICoachService {
             ]
         )
 
-        let body = try JSONEncoder().encode(request)
-        let headers = ["Authorization": "Bearer \(Secrets.deepseekAPIKey)"]
-
-        let response: DeepSeekResponse = try await NetworkService.shared.request(
-            url: ServiceEndpoint.DeepSeek.chatCompletions,
-            headers: headers,
-            body: body
-        )
-
-        guard let text = response.choices.first?.message.content else {
-            throw AIAnalysisError.emptyResponse
-        }
+        let text:String = try await aiService.query(req: request)
 
         let jsonText = stripMarkdownCodeBlock(text)
         guard let jsonData = jsonText.data(using: .utf8) else {
@@ -80,7 +69,7 @@ final class DeepSeekAICoachService: AICoachService {
         只返回指导文字，不要JSON格式。
         """
 
-        let request = DeepSeekRequest(
+        let request = FitAIRequest(
             model: "deepseek-chat",
             maxTokens: 200,
             messages: [
@@ -89,18 +78,7 @@ final class DeepSeekAICoachService: AICoachService {
             ]
         )
 
-        let body = try JSONEncoder().encode(request)
-        let headers = ["Authorization": "Bearer \(Secrets.deepseekAPIKey)"]
-
-        let response: DeepSeekResponse = try await NetworkService.shared.request(
-            url: ServiceEndpoint.DeepSeek.chatCompletions,
-            headers: headers,
-            body: body
-        )
-
-        guard let text = response.choices.first?.message.content else {
-            throw AIAnalysisError.emptyResponse
-        }
+        let text = try await aiService.query(req: request)
 
         return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -130,7 +108,7 @@ final class DeepSeekAICoachService: AICoachService {
         {"summary":"本周训练总结...","improvements":["改善点1","改善点2"],"recommendations":["建议1","建议2"]}
         """
 
-        let request = DeepSeekRequest(
+        let request = FitAIRequest(
             model: "deepseek-chat",
             maxTokens: 1024,
             messages: [
@@ -139,18 +117,7 @@ final class DeepSeekAICoachService: AICoachService {
             ]
         )
 
-        let body = try JSONEncoder().encode(request)
-        let headers = ["Authorization": "Bearer \(Secrets.deepseekAPIKey)"]
-
-        let response: DeepSeekResponse = try await NetworkService.shared.request(
-            url: ServiceEndpoint.DeepSeek.chatCompletions,
-            headers: headers,
-            body: body
-        )
-
-        guard let text = response.choices.first?.message.content else {
-            throw AIAnalysisError.emptyResponse
-        }
+        let text = try await aiService.query(req: request)
 
         let jsonText = stripMarkdownCodeBlock(text)
         guard let jsonData = jsonText.data(using: .utf8) else {
@@ -174,31 +141,3 @@ final class DeepSeekAICoachService: AICoachService {
     }
 }
 
-// MARK: - DeepSeek API models
-
-private struct DeepSeekRequest: Encodable {
-    let model: String
-    let maxTokens: Int
-    let messages: [Message]
-
-    struct Message: Encodable {
-        let role: String
-        let content: String
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case model
-        case maxTokens = "max_tokens"
-        case messages
-    }
-}
-
-private struct DeepSeekResponse: Decodable {
-    struct Choice: Decodable {
-        struct Message: Decodable {
-            let content: String
-        }
-        let message: Message
-    }
-    let choices: [Choice]
-}

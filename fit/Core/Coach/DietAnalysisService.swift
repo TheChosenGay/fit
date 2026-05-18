@@ -56,9 +56,9 @@ final class ZhipuDietAnalysisService: DietAnalysisService {
 
         let encoded = try JSONEncoder().encode(body)
         let response: DietMultimodalResponse = try await NetworkService.shared.request(
-            url: ServiceEndpoint.Zhipu.chatCompletions,
-            headers: ["Authorization": "Bearer \(Secrets.zhipuAPIKey)"],
-            body: encoded
+            endpoint: .zhipu,
+            body: encoded,
+            authKey: Secrets.zhipuAPIKey
         )
 
         guard let text = response.choices.first?.message.content else {

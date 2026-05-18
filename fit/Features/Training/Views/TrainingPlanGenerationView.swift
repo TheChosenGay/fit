@@ -12,6 +12,8 @@ struct TrainingPlanGenerationView: View {
     @State private var sessionsPerWeek: Int = 3
     @State private var isGenerating = false
     @State private var errorMessage: String?
+    
+    private let aiService = FitGenericAIService(type:.deepseek)
 
     private let goalOptions: [(String, String)] = [
         ("posture_correction", "体态矫正"),
@@ -138,7 +140,7 @@ struct TrainingPlanGenerationView: View {
             }
             """
 
-            let request = PlanGenRequest(
+            let request = FitAIRequest(
                 model: "deepseek-chat",
                 maxTokens: 2048,
                 messages: [
@@ -146,15 +148,11 @@ struct TrainingPlanGenerationView: View {
                     .init(role: "user", content: prompt),
                 ]
             )
-
-            let body = try JSONEncoder().encode(request)
-            let response: PlanGenResponse = try await NetworkService.shared.request(
-                url: ServiceEndpoint.DeepSeek.chatCompletions,
-                headers: ["Authorization": "Bearer \(Secrets.deepseekAPIKey)"],
-                body: body
-            )
-
-            guard let text = response.choices.first?.message.content else {
+            
+            var text: String
+            do {
+                text = try await aiService.query(req: request)
+            }catch {
                 errorMessage = "AI 未返回内容"
                 isGenerating = false
                 return
@@ -252,22 +250,6 @@ private struct SectionCard<Content: View>: View {
 
 // MARK: - API models
 
-private struct PlanGenRequest: Encodable {
-    let model: String
-    let maxTokens: Int
-    let messages: [Message]
-
-    struct Message: Encodable {
-        let role: String
-        let content: String
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case model
-        case maxTokens = "max_tokens"
-        case messages
-    }
-}
 
 private struct PlanGenResponse: Decodable {
     struct Choice: Decodable {
