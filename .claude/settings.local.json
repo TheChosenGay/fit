@@ -46,7 +46,12 @@
       "Bash(.venv/bin/python3 ConvertRTMPose.py)",
       "WebFetch(domain:download.openmmlab.com)",
       "WebFetch(domain:github.com)",
-      "Bash([ -f \"/Users/daishan/fit/fit/$f\" ])"
+      "Bash([ -f \"/Users/daishan/fit/fit/$f\" ])",
+      "Bash(curl -s -w '\\\\n%{http_code}' https://api.minimax.chat/v1/text/chatcompletion_v2 -H 'Authorization: Bearer sk-cp-6IZGf_wF_Ryg9S32dVniDyRuHuhZoxy7VafM46cA2Mm-FTteJpcrbiLzWOox0TJeW9COyKpK770pRQ16NE_LjpSeqCevcg07uZr2sc5liuZ2xqVI-bPH5aE' -H 'Content-Type: application/json' -d '{ *)",
+      "Bash(curl -s https://api.minimax.chat/v1/text/chatcompletion_v2 -H 'Authorization: Bearer sk-cp-6IZGf_wF_Ryg9S32dVniDyRuHuhZoxy7VafM46cA2Mm-FTteJpcrbiLzWOox0TJeW9COyKpK770pRQ16NE_LjpSeqCevcg07uZr2sc5liuZ2xqVI-bPH5aE' -H 'Content-Type: application/json' -d '{ *)",
+      "Bash(curl -s https://api.minimax.chat/v1/text/chatcompletion_v2 -H 'Authorization: Bearer sk-cp-6IZGf_wF_Ryg9S32dVniDyRuHuhZoxy7VafM46cA2Mm-FTteJpcrbiLzWOox0TJeW9COyKpK770pRQ16NE_LjpSeqCevcg07uZr2sc5liuZ2xqVI-bPH5aE' -H 'Content-Type: application/json' -d '{\"model\":\"__TRACKED_VAR__\",\"max_tokens\":30,\"messages\":[{\"role\":\"user\",\"content\":\"回复ok\"}]}')",
+      "Bash(curl -s https://api.minimax.chat/v1/text/chatcompletion_v2 -H 'Authorization: Bearer sk-cp-6IZGf_wF_Ryg9S32dVniDyRuHuhZoxy7VafM46cA2Mm-FTteJpcrbiLzWOox0TJeW9COyKpK770pRQ16NE_LjpSeqCevcg07uZr2sc5liuZ2xqVI-bPH5aE' -H 'Content-Type: application/json' -d '{\"model\":\"MiniMax-M2.7\",\"max_tokens\":50,\"messages\":[{\"role\":\"user\",\"content\":\"回复ok\"}]}')",
+      "Bash(curl -s https://api.minimax.chat/v1/text/chatcompletion_v2 -H 'Authorization: Bearer sk-cp-6IZGf_wF_Ryg9S32dVniDyRuHuhZoxy7VafM46cA2Mm-FTteJpcrbiLzWOox0TJeW9COyKpK770pRQ16NE_LjpSeqCevcg07uZr2sc5liuZ2xqVI-bPH5aE' -H 'Content-Type: application/json' -d '{\"model\":\"MiniMax-M2\",\"max_tokens\":50,\"messages\":[{\"role\":\"user\",\"content\":\"回复ok\"}]}')"
     ]
   }
 }

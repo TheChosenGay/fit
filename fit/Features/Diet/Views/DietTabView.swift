@@ -5,9 +5,8 @@ import SwiftData
 struct DietTabView: View {
     @Environment(\.modelContext) private var modelContext
     @StateObject private var viewModel = DietViewModel()
-    @State private var showPhotoPicker = false
+    @State private var showFoodCamera = false
     @State private var selectedMealType = "lunch"
-    @State private var showMealTypePicker = false
 
     @Query private var profiles: [UserProfile]
 
@@ -43,7 +42,7 @@ struct DietTabView: View {
                     .tint(.dsPrimary)
 
                     Button {
-                        showPhotoPicker = true
+                        showFoodCamera = true
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.title3)
@@ -59,13 +58,9 @@ struct DietTabView: View {
             .padding(.bottom, DSSpacing.huge)
         }
         .background(Color.dsBackground.ignoresSafeArea())
-        .sheet(isPresented: $showPhotoPicker) {
-            PhotoPickerView { image in
-                let mealType = selectedMealType
-                Task {
-                    _ = await viewModel.analyzeMeal(image: image, mealType: mealType, context: modelContext)
-                }
-            }
+        .navigationDestination(isPresented: $showFoodCamera) {
+            FoodCameraView(mealType: selectedMealType)
+                .navigationBarHidden(true)
         }
         .overlay {
             if viewModel.isAnalyzing {
