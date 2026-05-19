@@ -60,9 +60,7 @@ final class RealtimeCoachSession: ObservableObject {
     }
 
     convenience init() {
-        self.init(
-            streamingAI: HTTPStreamingService(deepSeekKey: Secrets.deepseekAPIKey)
-        )
+        self.init(streamingAI: HTTPStreamingService())
     }
 
     // MARK: Lifecycle

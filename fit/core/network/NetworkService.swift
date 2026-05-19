@@ -68,26 +68,14 @@ final class NetworkService {
     static let shared = NetworkService()
     private init() {}
 
+    // MARK: Standard request (JSON decode)
+
     func request<T: Decodable>(
         endpoint: EndPoint,
         body: Data? = nil,
-        authKey: String? = nil,
+        authKey: String? = nil
     ) async throws -> T {
-        guard let url = endpoint.url else {
-            throw NetworkError.invalidURL
-        }
-        
-        var headers:[String:String] = [:]
-        if let key = authKey {
-            let headers = ["Authorization": "Bearer \(key)"]
-        }
-        var urlRequest = URLRequest(url: url)
-        urlRequest.httpMethod = endpoint.method.rawValue
-        urlRequest.httpBody = body
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        headers.forEach { urlRequest.setValue($1, forHTTPHeaderField: $0)}
-
-        let (data, response) = try await URLSession.shared.data(for: urlRequest)
+        let (data, response) = try await perform(endpoint: endpoint, body: body, authKey: authKey)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkError.noData
@@ -101,5 +89,55 @@ final class NetworkService {
         } catch {
             throw NetworkError.decodingFailed(error)
         }
+    }
+
+    // MARK: Streaming request (returns byte stream)
+
+    func streamRequest(
+        endpoint: EndPoint,
+        body: Data,
+        authKey: String? = nil
+    ) async throws -> (bytes: URLSession.AsyncBytes, response: HTTPURLResponse) {
+        let urlRequest = buildRequest(endpoint: endpoint, body: body, authKey: authKey)
+        let (bytes, response) = try await URLSession.shared.bytes(for: urlRequest)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.noData
+        }
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+
+        return (bytes, httpResponse)
+    }
+
+    // MARK: Private helpers
+
+    private func buildRequest(endpoint: EndPoint, body: Data?, authKey: String?) -> URLRequest {
+        guard let url = endpoint.url else {
+            preconditionFailure("Invalid endpoint URL: \(endpoint.urlString)")
+        }
+
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = endpoint.method.rawValue
+        urlRequest.httpBody = body
+        if body != nil {
+            urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
+
+        if let key = authKey {
+            urlRequest.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        }
+
+        return urlRequest
+    }
+
+    private func perform(
+        endpoint: EndPoint,
+        body: Data?,
+        authKey: String?
+    ) async throws -> (Data, URLResponse) {
+        let urlRequest = buildRequest(endpoint: endpoint, body: body, authKey: authKey)
+        return try await URLSession.shared.data(for: urlRequest)
     }
 }
