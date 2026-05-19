@@ -9,9 +9,10 @@ final class RTMPoseDetector {
 
     nonisolated static let detector = RTMPoseDetector()
 
-    private let modelInputWidth = 192
-    private let modelInputHeight = 256
-    private let confidenceThreshold: Float = 0.3
+    private let modelInputWidth = 288
+    private let modelInputHeight = 384
+    private let confidenceThreshold: Float = 0.45
+    private let bboxExpandFactor: CGFloat = 1.25
 
     // SimCC doubles the resolution
     private let simccScaleX: Float = 2.0
@@ -115,31 +116,55 @@ final class RTMPoseDetector {
             .boundingBox
     }
 
+    // MARK: - BBox Expansion + Aspect Ratio Adjustment
+
+    private func expandAndAdjustBBox(_ bbox: CGRect, imageWidth: CGFloat, imageHeight: CGFloat) -> CGRect {
+        // Target: pixel crop aspect = modelInputWidth / modelInputHeight
+        // In normalized space: (w * imageWidth) / (h * imageHeight) = modelW / modelH
+        // So: w / h = (modelW / modelH) * (imageHeight / imageWidth)
+        let targetNormAspect = (CGFloat(modelInputWidth) * imageHeight) / (CGFloat(modelInputHeight) * imageWidth)
+
+        let cx = bbox.midX, cy = bbox.midY
+        var w = bbox.width * bboxExpandFactor
+        var h = bbox.height * bboxExpandFactor
+
+        let currentAspect = w / h
+        if currentAspect > targetNormAspect {
+            h = w / targetNormAspect
+        } else {
+            w = h * targetNormAspect
+        }
+
+        let x = max(0, cx - w / 2)
+        let y = max(0, cy - h / 2)
+        return CGRect(x: x, y: y, width: min(w, 1 - x), height: min(h, 1 - y))
+    }
+
     // MARK: - Crop + Resize pixel buffer
 
     private func cropAndResize(
         pixelBuffer: CVPixelBuffer,
-        bbox: CGRect
+        bbox: CGRect,
+        orientation: CGImagePropertyOrientation = .up
     ) -> CVPixelBuffer? {
-        let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
-        let w = CGFloat(CVPixelBufferGetWidth(pixelBuffer))
-        let h = CGFloat(CVPixelBufferGetHeight(pixelBuffer))
+        let ciImage = CIImage(cvPixelBuffer: pixelBuffer).oriented(orientation)
+        let extent = ciImage.extent
+        let w = extent.width
+        let h = extent.height
 
-        // Vision bbox is bottom-left origin normalized → pixel rect (top-left origin for CI)
         let cropRect = CGRect(
-            x: bbox.origin.x * w,
-            y: bbox.origin.y * h,
+            x: extent.origin.x + bbox.origin.x * w,
+            y: extent.origin.y + bbox.origin.y * h,
             width: bbox.width * w,
             height: bbox.height * h
         )
 
         let cropped = ciImage.cropped(to: cropRect)
 
-        let scaleX = CGFloat(modelInputWidth) / cropRect.width
-        let scaleY = CGFloat(modelInputHeight) / cropRect.height
+        let scale = CGFloat(modelInputWidth) / cropRect.width
         let scaled = cropped
             .transformed(by: CGAffineTransform(translationX: -cropRect.origin.x, y: -cropRect.origin.y))
-            .transformed(by: CGAffineTransform(scaleX: scaleX, y: scaleY))
+            .transformed(by: CGAffineTransform(scaleX: scale, y: scale))
 
         var outputBuffer: CVPixelBuffer?
         CVPixelBufferCreate(
@@ -184,13 +209,15 @@ extension RTMPoseDetector: BodyPoseDetectService {
     func detectBodyPoseSync(from sampleBuffer: CMSampleBuffer, orientation: CGImagePropertyOrientation = .up) -> BodyJoints? {
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return nil }
 
-        let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: orientation, options: [:])
-        guard let bbox = detectPersonBBox(handler: handler) else { return nil }
-        guard let croppedBuffer = cropAndResize(pixelBuffer: pixelBuffer, bbox: bbox) else { return nil }
-        guard let (simccX, simccY) = predict(pixelBuffer: croppedBuffer) else { return nil }
+        let orientedExtent = CIImage(cvPixelBuffer: pixelBuffer).oriented(orientation).extent
+        let fullW = orientedExtent.width
+        let fullH = orientedExtent.height
 
-        let fullW = CGFloat(CVPixelBufferGetWidth(pixelBuffer))
-        let fullH = CGFloat(CVPixelBufferGetHeight(pixelBuffer))
+        let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: orientation, options: [:])
+        guard let rawBBox = detectPersonBBox(handler: handler) else { return nil }
+        let bbox = expandAndAdjustBBox(rawBBox, imageWidth: fullW, imageHeight: fullH)
+        guard let croppedBuffer = cropAndResize(pixelBuffer: pixelBuffer, bbox: bbox, orientation: orientation) else { return nil }
+        guard let (simccX, simccY) = predict(pixelBuffer: croppedBuffer) else { return nil }
 
         let allJoints = decodeSimCC(
             simccX: simccX, simccY: simccY,
@@ -200,6 +227,7 @@ extension RTMPoseDetector: BodyPoseDetectService {
         let renderableJoints = WholeBodyJointMap.mapToRenderable(allJoints)
         return renderableJoints.isEmpty ? nil : renderableJoints
     }
+
 }
 
 // MARK: - PoseDetectService (static UIImage)
@@ -210,13 +238,15 @@ extension RTMPoseDetector: PoseDetectService {
     func detectPose(from image: UIImage) async throws -> PosePoints? {
         guard let cgImage = image.cgImage else { return nil }
 
+        let w = CGFloat(cgImage.width)
+        let h = CGFloat(cgImage.height)
+
         let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-        guard let bbox = detectPersonBBox(handler: handler) else { return nil }
+        guard let rawBBox = detectPersonBBox(handler: handler) else { return nil }
+        let bbox = expandAndAdjustBBox(rawBBox, imageWidth: w, imageHeight: h)
 
         // Create CVPixelBuffer from CGImage
         let ciImage = CIImage(cgImage: cgImage)
-        let w = CGFloat(cgImage.width)
-        let h = CGFloat(cgImage.height)
 
         var srcBuffer: CVPixelBuffer?
         CVPixelBufferCreate(kCFAllocatorDefault, cgImage.width, cgImage.height,

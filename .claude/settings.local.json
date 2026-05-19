@@ -36,7 +36,16 @@
       "Bash(xargs cat)",
       "Bash(xcodebuild -project fit.xcodeproj -scheme fit -destination 'platform=iOS Simulator,name=iPhone 16 Pro' build)",
       "Bash(mkdir -p /Users/daishan/skill-knowledge)",
-      "Bash(cp /Users/daishan/skill-repo/commands/knowledge/test.md /Users/daishan/skill-knowledge/test.md)"
+      "Bash(cp /Users/daishan/skill-repo/commands/knowledge/test.md /Users/daishan/skill-knowledge/test.md)",
+      "Bash(xcodebuild -scheme fit -destination 'platform=iOS Simulator,name=iPhone 16 Pro' -quiet)",
+      "Bash(xcodebuild -scheme fit -destination 'platform=iOS Simulator,name=iPhone 16 Pro')",
+      "Bash(xcodebuild -project /Users/daishan/fit/fit/fit.xcodeproj -scheme fit -destination 'platform=iOS Simulator,name=iPhone 16' build)",
+      "Bash(xargs file)",
+      "Bash(xargs ls -1)",
+      "Bash(grep -E \"\\\\.\\(swift|h\\)$\")",
+      "Bash(.venv/bin/python3 ConvertRTMPose.py)",
+      "WebFetch(domain:download.openmmlab.com)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

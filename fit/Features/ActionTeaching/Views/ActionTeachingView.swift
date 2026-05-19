@@ -24,6 +24,15 @@ struct ActionTeachingView: View {
             }
 
             VStack {
+                if let error = viewModel.errorMessage {
+                    Text(error)
+                        .font(.subheadline)
+                        .foregroundColor(.red)
+                        .padding(12)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
+                        .padding(.top, 60)
+                }
+
                 Spacer()
 
                 if !viewModel.currentPhase.isEmpty {

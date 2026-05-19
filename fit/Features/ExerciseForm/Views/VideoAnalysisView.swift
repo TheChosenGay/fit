@@ -210,7 +210,7 @@ struct VideoAnalysisView: View {
         .background(Color.dsBackground.ignoresSafeArea())
         .navigationTitle("视频分析")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showPicker) {
+        .fullScreenCover(isPresented: $showPicker) {
             VideoPickerView { url in
                 selectedURL = url
                 loadVideoInfo(url: url)

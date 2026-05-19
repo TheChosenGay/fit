@@ -4,10 +4,8 @@ import SwiftData
 @available(iOS 17.0, *)
 struct StandardSequenceListView: View {
 
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \StandardSequenceCatalog.exerciseName) private var sequences: [StandardSequenceCatalog]
-    @State private var selectedSequence: StandardSequenceCatalog?
-    @State private var showTeaching = false
-    @State private var showComparison = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -26,16 +24,6 @@ struct StandardSequenceListView: View {
                 } label: {
                     Image(systemName: "plus")
                 }
-            }
-        }
-        .navigationDestination(isPresented: $showTeaching) {
-            if let seq = selectedSequence {
-                ActionTeachingView(exerciseId: seq.exerciseId)
-            }
-        }
-        .navigationDestination(isPresented: $showComparison) {
-            if let seq = selectedSequence {
-                ComparisonSessionView(exerciseId: seq.exerciseId)
             }
         }
     }
@@ -60,15 +48,26 @@ struct StandardSequenceListView: View {
     // MARK: - List
 
     private var sequenceList: some View {
-        ScrollView {
-            VStack(spacing: 12) {
-                ForEach(sequences) { seq in
-                    sequenceCard(seq)
-                }
+        List {
+            ForEach(sequences) { seq in
+                sequenceCard(seq)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 6, leading: DSSpacing.lg, bottom: 6, trailing: DSSpacing.lg))
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            withAnimation {
+                                deleteSequence(seq)
+                            }
+                        } label: {
+                            Image(systemName: "trash")
+                        }
+                    }
             }
-            .padding(.horizontal, DSSpacing.lg)
-            .padding(.vertical, DSSpacing.md)
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .animation(.easeInOut(duration: 0.3), value: sequences.count)
     }
 
     private func sequenceCard(_ seq: StandardSequenceCatalog) -> some View {
@@ -94,9 +93,8 @@ struct StandardSequenceListView: View {
             }
 
             HStack(spacing: 12) {
-                Button {
-                    selectedSequence = seq
-                    showTeaching = true
+                NavigationLink {
+                    ActionTeachingView(exerciseId: seq.exerciseId)
                 } label: {
                     Label("教学演示", systemImage: "play.circle")
                         .font(.subheadline.bold())
@@ -106,10 +104,10 @@ struct StandardSequenceListView: View {
                         .foregroundColor(.blue)
                         .cornerRadius(8)
                 }
+                .buttonStyle(.plain)
 
-                Button {
-                    selectedSequence = seq
-                    showComparison = true
+                NavigationLink {
+                    ComparisonSessionView(exerciseId: seq.exerciseId)
                 } label: {
                     Label("实时对比", systemImage: "person.2")
                         .font(.subheadline.bold())
@@ -119,6 +117,7 @@ struct StandardSequenceListView: View {
                         .foregroundColor(.green)
                         .cornerRadius(8)
                 }
+                .buttonStyle(.plain)
             }
         }
         .padding(DSSpacing.md)
@@ -126,5 +125,18 @@ struct StandardSequenceListView: View {
             RoundedRectangle(cornerRadius: DSCornerRadius.medium)
                 .fill(Color.white.opacity(0.08))
         )
+    }
+
+    // MARK: - Delete
+
+    private func deleteSequence(_ seq: StandardSequenceCatalog) {
+        // Delete JSON file
+        let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let fileURL = documentsDir.appendingPathComponent(seq.localFilePath)
+        try? FileManager.default.removeItem(at: fileURL)
+
+        // Delete SwiftData entry
+        modelContext.delete(seq)
+        try? modelContext.save()
     }
 }

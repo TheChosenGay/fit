@@ -30,11 +30,19 @@ final class ActionTeachingViewModel: ObservableObject {
         self.animationService = animationService ?? DefaultSequenceAnimationService(actionService: actionService)
     }
 
+    @Published var errorMessage: String?
+
     func loadSequence(exerciseId: String) async {
         do {
-            sequence = try await actionService.loadSequence(exerciseId: exerciseId)
+            let loaded = try await actionService.loadSequence(exerciseId: exerciseId)
+            if let loaded {
+                sequence = loaded
+            } else {
+                errorMessage = "未找到动作序列文件: \(exerciseId)"
+            }
         } catch {
             sequence = nil
+            errorMessage = "加载失败: \(error.localizedDescription)"
         }
     }
 

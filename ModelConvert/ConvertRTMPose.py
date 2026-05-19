@@ -14,8 +14,8 @@ Output:
     ./Output/RTMPoseWholeBody.mlpackage
 
 Model details:
-    - RTMW-DW-L-M WholeBody (256×192 input, 133 keypoints)
-    - SimCC output: simcc_x [1, 133, 384], simcc_y [1, 133, 512]
+    - RTMW-DW-X-L WholeBody (384×288 input, 133 keypoints)
+    - SimCC output: simcc_x [1, 133, 576], simcc_y [1, 133, 768]
     - Decode: argmax(simcc_x) / 2 = x_pixel, argmax(simcc_y) / 2 = y_pixel
 """
 
@@ -29,10 +29,10 @@ from tqdm import tqdm
 
 POSE_ONNX_URL = (
     "https://download.openmmlab.com/mmpose/v1/projects/rtmw/onnx_sdk/"
-    "rtmw-dw-l-m_simcc-cocktail14_270e-256x192_20231122.zip"
+    "rtmw-dw-x-l_simcc-cocktail14_270e-384x288_20231122.zip"
 )
-INPUT_HEIGHT = 256
-INPUT_WIDTH = 192
+INPUT_HEIGHT = 384
+INPUT_WIDTH = 288
 NUM_KEYPOINTS = 133
 
 OUTPUT_DIR = Path(__file__).parent / "Output"
