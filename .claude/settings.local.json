@@ -45,7 +45,8 @@
       "Bash(grep -E \"\\\\.\\(swift|h\\)$\")",
       "Bash(.venv/bin/python3 ConvertRTMPose.py)",
       "WebFetch(domain:download.openmmlab.com)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash([ -f \"/Users/daishan/fit/fit/$f\" ])"
     ]
   }
 }
