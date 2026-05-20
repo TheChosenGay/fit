@@ -35,12 +35,14 @@ final class RealtimeCoachSession: ObservableObject {
     @Published var currentAIText: String = ""
     @Published var sessionState: SessionState = .idle
     @Published var currentFormResult: ExerciseFormResult?
+    @Published var isSpeaking = false
 
     // MARK: Dependencies
 
     private let streamingAI: StreamingAIService
     private let speechRecognizer: SpeechRecognizer
-    private let textSpeaker: TextSpeaker
+    let textSpeaker: TextSpeaker
+    private var cancellables = Set<AnyCancellable>()
     private let eventQueue = CoachEventQueue()
     private var eventProducer: CoachEventProducer?
 
@@ -50,6 +52,9 @@ final class RealtimeCoachSession: ObservableObject {
     private var currentStreamTask: Task<Void, Never>?
     private var triggerCheckTimer: Timer?
     private var sentenceBuffer: String = ""
+    private var lastPoseTime: Date = .distantPast
+    private var lastPersonAbsentEnqueue: Date = .distantPast
+    private let personAbsenceInterval: TimeInterval = 8.0
 
     // MARK: Init
 
@@ -57,6 +62,10 @@ final class RealtimeCoachSession: ObservableObject {
         self.streamingAI = streamingAI
         self.speechRecognizer = SpeechRecognizer.shared
         self.textSpeaker = TextSpeaker.shared
+        textSpeaker.$isSpeaking
+            .receive(on: DispatchQueue.main)
+            .assign(to: \.isSpeaking, on: self)
+            .store(in: &cancellables)
     }
 
     convenience init() {
@@ -69,6 +78,14 @@ final class RealtimeCoachSession: ObservableObject {
         eventProducer = CoachEventProducer(exercise: exercise)
         conversationHistory = [StreamingChatMessage(role: "system", content: systemPrompt)]
         eventQueue.markTriggered()
+        lastPoseTime = Date()
+
+        // Start STT with callback
+        try? speechRecognizer.startListening { [weak self] text in
+            Task { @MainActor [weak self] in
+                self?.interruptForUser(text)
+            }
+        }
 
         triggerCheckTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
@@ -91,6 +108,7 @@ final class RealtimeCoachSession: ObservableObject {
     // MARK: Input
 
     func onPoseFrame(_ joints: BodyJoints) {
+        lastPoseTime = Date()
         guard let producer = eventProducer else { return }
         let (result, events) = producer.processFrame(joints)
         currentFormResult = result
@@ -101,19 +119,23 @@ final class RealtimeCoachSession: ObservableObject {
     }
 
     func onAudioBuffer(_ buffer: CMSampleBuffer) {
-        Task { [weak self] in
-            guard let self else { return }
-            if let text = try? await self.speechRecognizer.speechToText(from: buffer),
-               !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                self.interruptForUser(text)
-            }
-        }
+        speechRecognizer.appendAudio(buffer)
     }
 
     // MARK: Core loop
 
     private func checkAndTrigger() {
         let isStreaming = currentStreamTask != nil
+
+        // Inject person-absence event with cooldown
+        let now = Date()
+        let personAbsent = now.timeIntervalSince(lastPoseTime) >= personAbsenceInterval
+        if personAbsent && !isStreaming && lastPoseTime != .distantPast,
+           now.timeIntervalSince(lastPersonAbsentEnqueue) >= personAbsenceInterval {
+            eventQueue.enqueue(.personAbsent)
+            lastPersonAbsentEnqueue = now
+        }
+
         guard eventQueue.shouldTrigger(isStreaming: isStreaming) else { return }
 
         if currentStreamTask != nil {

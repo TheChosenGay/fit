@@ -1,57 +1,64 @@
 import AVFoundation
+import Combine
 
-final class TextSpeaker {
-    nonisolated static let shared = TextSpeaker()
+@MainActor
+final class TextSpeaker: NSObject, ObservableObject {
+    static let shared = TextSpeaker()
 
     private let synthesizer = AVSpeechSynthesizer()
-    private var delegateProxy: SynthesizerDelegateProxy?
-    private var continuation: CheckedContinuation<Void, Error>?
+    private var onFinish: (() -> Void)?
+    @Published var isSpeaking = false
 
-    private init() {}
-
-    private func setDelegate(onFinish: @escaping () -> Void) {
-        let proxy = SynthesizerDelegateProxy(onFinish: onFinish)
-        delegateProxy = proxy  // keep strong reference so delegate isn't deallocated
-        synthesizer.delegate = proxy
-    }
-}
-
-extension TextSpeaker: FitTextToSpeechService {
-
-    func textToSpeech(_ text: String) async throws {
-        let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = AVSpeechSynthesisVoice(language: "zh-CN")
-        utterance.rate = 0.5
-
-        setDelegate { [weak self] in
-            self?.continuation?.resume()
-            self?.continuation = nil
-        }
-
-        return try await withCheckedThrowingContinuation { c in
-            continuation = c
-            synthesizer.speak(utterance)
-        }
+    override init() {
+        super.init()
+        synthesizer.delegate = self
     }
 
     func stopSpeaking() {
         guard synthesizer.isSpeaking else { return }
         synthesizer.stopSpeaking(at: .immediate)
-        continuation?.resume()
-        continuation = nil
+        isSpeaking = false
+        onFinish?()
+        onFinish = nil
     }
 }
 
-// MARK: - Delegate Proxy
+extension TextSpeaker: FitTextToSpeechService {
 
-private final class SynthesizerDelegateProxy: NSObject, AVSpeechSynthesizerDelegate {
-    let onFinish: () -> Void
+    func textToSpeech(_ text: String) async {
+        // Wait for any in-progress utterance to finish
+        while isSpeaking {
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
 
-    init(onFinish: @escaping () -> Void) {
-        self.onFinish = onFinish
+        let session = AVAudioSession.sharedInstance()
+        if session.category != .playAndRecord {
+            try? session.setCategory(.playAndRecord, options: [.defaultToSpeaker, .allowBluetooth])
+            try? session.setActive(true)
+        }
+
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.voice = AVSpeechSynthesisVoice(language: "zh-CN")
+        utterance.rate = 0.5
+
+        await withCheckedContinuation { c in
+            isSpeaking = true
+            onFinish = {
+                c.resume()
+            }
+            synthesizer.speak(utterance)
+        }
+        isSpeaking = false
     }
+}
 
-    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        onFinish()
+// MARK: - AVSpeechSynthesizerDelegate
+
+extension TextSpeaker: AVSpeechSynthesizerDelegate {
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        Task { @MainActor in
+            TextSpeaker.shared.onFinish?()
+            TextSpeaker.shared.onFinish = nil
+        }
     }
 }

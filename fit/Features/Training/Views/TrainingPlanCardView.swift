@@ -16,7 +16,7 @@ struct TrainingPlanCardView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(plan.name)
                         .dsTextStyle(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(.dsLabel)
                     Text("目标：\(goalLabel(plan.targetGoal))")
                         .dsTextStyle(.caption2)
                         .foregroundColor(.dsLabelSecondary)
@@ -32,7 +32,7 @@ struct TrainingPlanCardView: View {
             }
 
             if let session = todaySession {
-                Divider().background(Color.white.opacity(0.1))
+                Divider().background(Color.dsSeparator)
 
                 Text("今日训练 · \(session.focusArea)")
                     .dsTextStyle(.caption1)
@@ -42,15 +42,15 @@ struct TrainingPlanCardView: View {
                     HStack(spacing: DSSpacing.xs) {
                         Text(exercise.name)
                             .dsTextStyle(.caption1)
-                            .foregroundColor(.white)
+                            .foregroundColor(.dsLabel)
                         Spacer()
                         Text("\(exercise.sets)组 × \(exercise.repsPerSet)次")
                             .dsTextStyle(.caption2)
-                            .foregroundColor(.white.opacity(0.5))
+                            .foregroundColor(.dsLabelTertiary)
                         if exercise.restSeconds > 0 {
                             Text("休\(exercise.restSeconds)s")
                                 .dsTextStyle(.caption2)
-                                .foregroundColor(.white.opacity(0.3))
+                                .foregroundColor(.dsLabelTertiary)
                         }
                     }
                 }
@@ -74,8 +74,9 @@ struct TrainingPlanCardView: View {
         .padding(DSSpacing.md)
         .background(
             RoundedRectangle(cornerRadius: DSCornerRadius.medium)
-                .fill(Color.white.opacity(0.08))
+                .fill(Color.dsSurfaceSecondary)
         )
+        .dsShadow(.subtle)
         .padding(.horizontal, DSSpacing.lg)
     }
 

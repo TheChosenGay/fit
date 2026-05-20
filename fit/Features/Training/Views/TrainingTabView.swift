@@ -6,7 +6,7 @@ import SwiftData
 
 struct TrainingTabView: View {
     @State private var showCamera = false
-    @State private var showWorkout = false
+    @State private var showCoach = false
     @Query(filter: #Predicate<TrainingPlan> { $0.isActive }, sort: \TrainingPlan.createdAt, order: .reverse) private var activePlans: [TrainingPlan]
 
     private var activePlan: TrainingPlan? { activePlans.first }
@@ -24,8 +24,8 @@ struct TrainingTabView: View {
                 // Section: 体态检测
                 VStack(alignment: .leading, spacing: DSSpacing.sm) {
                     Text("体态检测")
-                        .dsTextStyle(.body)
-                        .foregroundColor(.white)
+                        .dsTextStyle(.headline)
+                        .foregroundColor(.dsLabel)
                         .padding(.horizontal, DSSpacing.lg)
 
                     // 实时摄像头
@@ -74,8 +74,8 @@ struct TrainingTabView: View {
                 // Section: 实时训练
                 VStack(alignment: .leading, spacing: DSSpacing.sm) {
                     Text("实时训练")
-                        .dsTextStyle(.body)
-                        .foregroundColor(.white)
+                        .dsTextStyle(.headline)
+                        .foregroundColor(.dsLabel)
                         .padding(.horizontal, DSSpacing.lg)
 
                     entryCard(
@@ -84,7 +84,7 @@ struct TrainingTabView: View {
                         bgColor: Color.dsError.opacity(0.15),
                         title: "AI 教练指导训练",
                         subtitle: "实时摄像头追踪动作，AI 语音指导纠正",
-                        action: { showWorkout = true }
+                        action: { showCoach = true }
                     )
                     .padding(.horizontal, DSSpacing.lg)
 
@@ -101,8 +101,8 @@ struct TrainingTabView: View {
                     }
                     .padding(.horizontal, DSSpacing.lg)
                 }
-                .fullScreenCover(isPresented: $showWorkout) {
-                    WorkoutSessionView()
+                .fullScreenCover(isPresented: $showCoach) {
+                    RealtimeCoachView(exercise: .squat)
                 }
 
                 // Section: 训练计划
@@ -111,8 +111,8 @@ struct TrainingTabView: View {
                 } else {
                     VStack(alignment: .leading, spacing: DSSpacing.sm) {
                         Text("训练计划")
-                            .dsTextStyle(.body)
-                            .foregroundColor(.white)
+                            .dsTextStyle(.headline)
+                            .foregroundColor(.dsLabel)
                             .padding(.horizontal, DSSpacing.lg)
 
                         NavigationLink {
@@ -160,35 +160,37 @@ struct TrainingTabView: View {
         title: String,
         subtitle: String
     ) -> some View {
-        HStack(spacing: 16) {
+        HStack(spacing: DSSpacing.md) {
             Image(systemName: icon)
-                .font(.system(size: 32))
+                .font(.system(size: 28))
                 .foregroundColor(iconColor)
-                .frame(width: 56, height: 56)
+                .frame(width: 52, height: 52)
                 .background(
                     RoundedRectangle(cornerRadius: DSCornerRadius.medium)
-                        .fill(bgColor)
+                        .fill(iconColor.opacity(0.15))
                 )
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .dsTextStyle(.body)
-                    .foregroundColor(.white)
+                    .dsTextStyle(.callout)
+                    .foregroundColor(.dsLabel)
                 Text(subtitle)
-                    .dsTextStyle(.caption1)
-                    .foregroundColor(.white.opacity(0.5))
+                    .dsTextStyle(.caption2)
+                    .foregroundColor(.dsLabelTertiary)
             }
 
             Spacer()
 
             Image(systemName: "chevron.right")
-                .foregroundColor(.white.opacity(0.3))
+                .font(.caption2)
+                .foregroundColor(.dsLabelTertiary)
         }
         .padding(DSSpacing.md)
         .background(
             RoundedRectangle(cornerRadius: DSCornerRadius.medium)
-                .fill(Color.white.opacity(0.08))
+                .fill(Color.dsSurfaceSecondary)
         )
+        .dsShadow(.subtle)
     }
 }
 
@@ -201,19 +203,19 @@ struct AnalysisHistorySection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DSSpacing.sm) {
             Text("检测历史")
-                .dsTextStyle(.body)
-                .foregroundColor(.white)
+                .dsTextStyle(.headline)
+                .foregroundColor(.dsLabel)
                 .padding(.horizontal, DSSpacing.lg)
 
             if records.isEmpty {
                 Text("暂无检测记录")
                     .dsTextStyle(.caption1)
-                    .foregroundColor(.white.opacity(0.5))
+                    .foregroundColor(.dsLabelTertiary)
                     .padding(DSSpacing.md)
                     .frame(maxWidth: .infinity)
                     .background(
                         RoundedRectangle(cornerRadius: DSCornerRadius.medium)
-                            .fill(Color.white.opacity(0.08))
+                            .fill(Color.dsSurfaceSecondary)
                     )
                     .padding(.horizontal, DSSpacing.lg)
             } else {
@@ -225,10 +227,10 @@ struct AnalysisHistorySection: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(record.date, style: .date)
                                     .dsTextStyle(.caption1)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.dsLabel)
                                 Text(record.summary)
                                     .dsTextStyle(.caption2)
-                                    .foregroundColor(.white.opacity(0.5))
+                                    .foregroundColor(.dsLabelTertiary)
                                     .lineLimit(1)
                             }
 
@@ -236,18 +238,19 @@ struct AnalysisHistorySection: View {
 
                             HStack(spacing: 4) {
                                 Text("\(record.overallScore)")
-                                    .dsTextStyle(.body)
+                                    .dsTextStyle(.callout)
                                     .foregroundColor(scoreColor(record.overallScore))
                                 Text("分")
                                     .dsTextStyle(.caption2)
-                                    .foregroundColor(.white.opacity(0.5))
+                                    .foregroundColor(.dsLabelTertiary)
                             }
                         }
                         .padding(DSSpacing.md)
                         .background(
                             RoundedRectangle(cornerRadius: DSCornerRadius.medium)
-                                .fill(Color.white.opacity(0.08))
+                                .fill(Color.dsSurfaceSecondary)
                         )
+                        .dsShadow(.subtle)
                     }
                     .padding(.horizontal, DSSpacing.lg)
                 }
@@ -280,15 +283,15 @@ struct AnalysisHistoryDetailView: View {
                         .foregroundColor(scoreColor(record.overallScore))
                     Text("综合评分")
                         .dsTextStyle(.caption1)
-                        .foregroundColor(.white.opacity(0.5))
+                        .foregroundColor(.dsLabelTertiary)
                 }
                 .padding(DSSpacing.lg)
 
                 // Angles
                 VStack(alignment: .leading, spacing: DSSpacing.sm) {
                     Text("体态数据")
-                        .dsTextStyle(.body)
-                        .foregroundColor(.white)
+                        .dsTextStyle(.headline)
+                        .foregroundColor(.dsLabel)
 
                     if let hf = record.headForward {
                         angleRow("头部前伸", value: String(format: "%.1f°", hf))
@@ -309,24 +312,26 @@ struct AnalysisHistoryDetailView: View {
                 .padding(DSSpacing.md)
                 .background(
                     RoundedRectangle(cornerRadius: DSCornerRadius.medium)
-                        .fill(Color.white.opacity(0.08))
+                        .fill(Color.dsSurfaceSecondary)
                 )
+                .dsShadow(.subtle)
                 .padding(.horizontal, DSSpacing.lg)
 
                 // Summary
                 VStack(alignment: .leading, spacing: DSSpacing.sm) {
                     Text("AI 总结")
-                        .dsTextStyle(.body)
-                        .foregroundColor(.white)
+                        .dsTextStyle(.headline)
+                        .foregroundColor(.dsLabel)
                     Text(record.summary)
                         .dsTextStyle(.caption1)
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundColor(.dsLabelSecondary)
                 }
                 .padding(DSSpacing.md)
                 .background(
                     RoundedRectangle(cornerRadius: DSCornerRadius.medium)
-                        .fill(Color.white.opacity(0.08))
+                        .fill(Color.dsSurfaceSecondary)
                 )
+                .dsShadow(.subtle)
                 .padding(.horizontal, DSSpacing.lg)
 
                 // Issues
@@ -334,7 +339,7 @@ struct AnalysisHistoryDetailView: View {
                     VStack(alignment: .leading, spacing: DSSpacing.sm) {
                         Text("体态问题")
                             .dsTextStyle(.body)
-                            .foregroundColor(.white)
+                            .foregroundColor(.dsLabel)
 
                         ForEach(Array(issues)) { issue in
                             HStack {
@@ -343,10 +348,10 @@ struct AnalysisHistoryDetailView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(issue.name)
                                         .dsTextStyle(.caption1)
-                                        .foregroundColor(.white)
+                                        .foregroundColor(.dsLabel)
                                     Text(issue.issueDescription)
                                         .dsTextStyle(.caption2)
-                                        .foregroundColor(.white.opacity(0.5))
+                                        .foregroundColor(.dsLabelTertiary)
                                 }
                             }
                             .padding(DSSpacing.xs)
@@ -355,8 +360,9 @@ struct AnalysisHistoryDetailView: View {
                     .padding(DSSpacing.md)
                     .background(
                         RoundedRectangle(cornerRadius: DSCornerRadius.medium)
-                            .fill(Color.white.opacity(0.08))
+                            .fill(Color.dsSurfaceSecondary)
                     )
+                    .dsShadow(.subtle)
                     .padding(.horizontal, DSSpacing.lg)
                 }
             }
@@ -371,11 +377,11 @@ struct AnalysisHistoryDetailView: View {
         HStack {
             Text(name)
                 .dsTextStyle(.caption1)
-                .foregroundColor(.white.opacity(0.7))
+                .foregroundColor(.dsLabelSecondary)
             Spacer()
             Text(value)
                 .dsTextStyle(.caption1)
-                .foregroundColor(.white)
+                .foregroundColor(.dsLabel)
         }
     }
 

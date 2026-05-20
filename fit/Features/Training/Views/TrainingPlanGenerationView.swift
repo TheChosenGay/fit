@@ -31,18 +31,18 @@ struct TrainingPlanGenerationView: View {
                         HStack {
                             Text("计划名称")
                                 .dsTextStyle(.body)
-                                .foregroundColor(.white)
+                                .foregroundColor(.dsLabel)
                             Spacer()
                             TextField("例如：4周增肌计划", text: $planName)
                                 .multilineTextAlignment(.trailing)
                                 .dsTextStyle(.body)
-                                .foregroundColor(.white)
+                                .foregroundColor(.dsLabel)
                         }
 
                         HStack {
                             Text("健身目标")
                                 .dsTextStyle(.body)
-                                .foregroundColor(.white)
+                                .foregroundColor(.dsLabel)
                             Spacer()
                             Picker("", selection: $targetGoal) {
                                 ForEach(goalOptions, id: \.0) { option in
@@ -55,7 +55,7 @@ struct TrainingPlanGenerationView: View {
                         HStack {
                             Text("持续周数")
                                 .dsTextStyle(.body)
-                                .foregroundColor(.white)
+                                .foregroundColor(.dsLabel)
                             Spacer()
                             Stepper("\(durationWeeks) 周", value: $durationWeeks, in: 1...24)
                                 .dsTextStyle(.body)
@@ -65,7 +65,7 @@ struct TrainingPlanGenerationView: View {
                         HStack {
                             Text("每周训练")
                                 .dsTextStyle(.body)
-                                .foregroundColor(.white)
+                                .foregroundColor(.dsLabel)
                             Spacer()
                             Stepper("\(sessionsPerWeek) 次", value: $sessionsPerWeek, in: 1...7)
                                 .dsTextStyle(.body)
@@ -236,14 +236,15 @@ private struct SectionCard<Content: View>: View {
         VStack(alignment: .leading, spacing: DSSpacing.sm) {
             Text(title)
                 .dsTextStyle(.headline)
-                .foregroundColor(.white)
+                .foregroundColor(.dsLabel)
             content
         }
         .padding(DSSpacing.md)
         .background(
             RoundedRectangle(cornerRadius: DSCornerRadius.medium)
-                .fill(Color.white.opacity(0.08))
+                .fill(Color.dsSurfaceSecondary)
         )
+        .dsShadow(.subtle)
         .padding(.horizontal, DSSpacing.lg)
     }
 }

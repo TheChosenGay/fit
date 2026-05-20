@@ -10,11 +10,16 @@ struct RealtimeCoachView: View {
 
     @Environment(\.modelContext) private var modelContext
 
+    @Environment(\.dismiss) private var dismiss
+
     @StateObject private var cameraVM = RealTimeCameraViewModel()
     @StateObject private var session = RealtimeCoachSession()
     @State private var isActive = false
     @State private var showExercisePicker = true
     @State private var audioCapture = AudioCapture()
+
+    // Pulse animation
+    @State private var pulseScale: CGFloat = 1.0
 
     // Pre-workout advice
     @State private var workoutAdvice: WorkoutAdvice?
@@ -64,7 +69,7 @@ struct RealtimeCoachView: View {
                 }
             }
 
-            // Layer 3: AI conversation overlay
+            // Layer 3: AI conversation overlay (non-blocking)
             VStack {
                 Spacer()
 
@@ -74,7 +79,21 @@ struct RealtimeCoachView: View {
                         .font(.subheadline)
                         .foregroundColor(.white)
                         .padding(12)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(.ultraThinMaterial)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(
+                                            LinearGradient(
+                                                colors: [.dsPrimary.opacity(0.5), .dsSecondary.opacity(0.3)],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ),
+                                            lineWidth: 1
+                                        )
+                                )
+                        )
                         .padding(.horizontal)
                         .padding(.bottom, 4)
                 }
@@ -94,7 +113,7 @@ struct RealtimeCoachView: View {
                 }
 
                 // Controls bar
-                HStack(spacing: 20) {
+                HStack(spacing: 16) {
                     Button(action: toggleSession) {
                         HStack(spacing: 6) {
                             Image(systemName: isActive ? "stop.fill" : "mic.fill")
@@ -109,10 +128,15 @@ struct RealtimeCoachView: View {
                     }
                     .disabled(isLoadingAdvice)
 
-                    HStack(spacing: 4) {
+                    // Audio waveform + status
+                    HStack(spacing: 8) {
+                        AudioWaveformBars(isActive: session.sessionState == .streaming || session.isSpeaking)
+
                         Circle()
-                            .fill(statusColor)
+                            .fill(session.sessionState == .streaming ? Color.green : statusColor)
                             .frame(width: 8, height: 8)
+                            .scaleEffect(session.sessionState == .streaming ? pulseScale : 1.0)
+                            .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: pulseScale)
                         Text(statusLabel)
                             .font(.caption)
                             .foregroundColor(.white)
@@ -127,8 +151,9 @@ struct RealtimeCoachView: View {
             // Exercise picker overlay
             if showExercisePicker {
                 Color.black.opacity(0.4).ignoresSafeArea()
+                    .onTapGesture { /* block taps through */ }
 
-                VStack(spacing: 16) {
+                VStack(spacing: 20) {
                     Text("选择训练动作")
                         .font(.title3.weight(.semibold))
                         .foregroundColor(.white)
@@ -140,11 +165,27 @@ struct RealtimeCoachView: View {
                     }
                     .pickerStyle(.segmented)
                     .padding(.horizontal)
-                    .disabled(true)
+                    .disabled(true) // TODO: enable exercise selection
 
                     Text("AI 教练将根据你的近期状态给出训练建议")
                         .font(.caption)
                         .foregroundColor(.white.opacity(0.6))
+
+                    Button {
+                        requestPreWorkoutAdvice()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "mic.fill")
+                            Text("开始教练")
+                        }
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 32)
+                        .padding(.vertical, 12)
+                        .background(Color.green)
+                        .cornerRadius(24)
+                    }
+                    .padding(.top, 8)
                 }
                 .padding(.top, 60)
             }
@@ -241,6 +282,24 @@ struct RealtimeCoachView: View {
                 )
                 .padding(32)
             }
+
+            // Top-level dismiss button (above all overlays)
+            VStack {
+                HStack {
+                    Button {
+                        stopSession()
+                        cameraVM.stopCamera()
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundColor(.white.opacity(0.7))
+                            .padding(12)
+                    }
+                    Spacer()
+                }
+                Spacer()
+            }
         }
         .onAppear {
             do {
@@ -256,6 +315,17 @@ struct RealtimeCoachView: View {
         .onChange(of: cameraVM.detectedJoints) { _, joints in
             guard isActive, let joints else { return }
             session.onPoseFrame(joints)
+        }
+        .onChange(of: session.sessionState) { _, state in
+            if state == .streaming {
+                withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
+                    pulseScale = 1.4
+                }
+            } else {
+                withAnimation(.default) {
+                    pulseScale = 1.0
+                }
+            }
         }
     }
 
@@ -319,6 +389,16 @@ struct RealtimeCoachView: View {
     }
 
     private func beginSession() {
+        // Request speech recognition authorization
+        Task {
+            _ = await SpeechRecognizer.requestAuthorization()
+        }
+
+        // Configure audio session for simultaneous playback and recording
+        let audioSession = AVAudioSession.sharedInstance()
+        try? audioSession.setCategory(.playAndRecord, options: [.defaultToSpeaker, .allowBluetooth, .mixWithOthers])
+        try? audioSession.setActive(true)
+
         cameraVM.startDetection()
         audioCapture.start { buffer in
             session.onAudioBuffer(buffer)
@@ -391,4 +471,39 @@ private final class AudioCapture: NSObject, AVCaptureAudioDataOutputSampleBuffer
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         onBuffer?(sampleBuffer)
     }
+}
+
+// MARK: - Audio Waveform Bars
+
+@available(iOS 17.0, *)
+private struct AudioWaveformBars: View {
+    let isActive: Bool
+
+    @State private var animating = false
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(0..<4, id: \.self) { index in
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(Color.white.opacity(0.8))
+                    .frame(width: 2.5, height: isActive ? barHeight(index) : 4)
+                    .scaleEffect(y: animating ? 1.0 : 0.4, anchor: .center)
+                    .animation(
+                        .easeInOut(duration: durations[index])
+                        .repeatForever(autoreverses: true)
+                        .delay(Double(index) * 0.1),
+                        value: animating
+                    )
+            }
+        }
+        .frame(height: 14)
+        .onChange(of: isActive) { _, active in
+            animating = active
+        }
+    }
+
+    private let heights: [CGFloat] = [8, 14, 6, 11]
+    private let durations: [Double] = [0.4, 0.55, 0.35, 0.5]
+
+    private func barHeight(_ index: Int) -> CGFloat { heights[index] }
 }

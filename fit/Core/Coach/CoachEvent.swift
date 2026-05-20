@@ -8,6 +8,7 @@ enum CoachEvent {
     case repComplete(count: Int, score: Int)
     case userSpeech(text: String)
     case formScore(score: Int, feedback: String)
+    case personAbsent
 
     var priority: Int {
         switch self {
@@ -16,6 +17,7 @@ enum CoachEvent {
         case .formScore: return 60
         case .repComplete: return 40
         case .phaseChange: return 20
+        case .personAbsent: return 30
         }
     }
 
@@ -31,6 +33,8 @@ enum CoachEvent {
             return "用户说：\(text)"
         case .formScore(let score, let feedback):
             return "当前动作评分：\(score)分 - \(feedback)"
+        case .personAbsent:
+            return "摄像头中未检测到用户，用户可能不在镜头前。简短提醒用户站到镜头前开始训练。"
         }
     }
 

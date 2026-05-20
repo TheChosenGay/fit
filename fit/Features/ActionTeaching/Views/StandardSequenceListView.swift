@@ -34,13 +34,13 @@ struct StandardSequenceListView: View {
         VStack(spacing: 16) {
             Image(systemName: "figure.run")
                 .font(.system(size: 56))
-                .foregroundColor(.white.opacity(0.3))
+                .foregroundColor(.dsLabelTertiary)
             Text("暂无标准动作")
                 .font(.headline)
-                .foregroundColor(.white.opacity(0.6))
+                .foregroundColor(.dsLabelTertiary)
             Text("点击右上角 + 导入标准视频生成")
                 .font(.subheadline)
-                .foregroundColor(.white.opacity(0.4))
+                .foregroundColor(.dsLabelTertiary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -76,20 +76,20 @@ struct StandardSequenceListView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(seq.exerciseName)
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(.dsLabel)
                     Text(seq.exerciseId)
                         .font(.caption)
-                        .foregroundColor(.white.opacity(0.5))
+                        .foregroundColor(.dsLabelTertiary)
                 }
 
                 Spacer()
 
                 Text("v\(seq.version)")
                     .font(.caption2)
-                    .foregroundColor(.white.opacity(0.4))
+                    .foregroundColor(.dsLabelTertiary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Capsule().fill(Color.white.opacity(0.1)))
+                    .background(Capsule().fill(Color.dsSurfaceSecondary))
             }
 
             HStack(spacing: 12) {
@@ -123,8 +123,9 @@ struct StandardSequenceListView: View {
         .padding(DSSpacing.md)
         .background(
             RoundedRectangle(cornerRadius: DSCornerRadius.medium)
-                .fill(Color.white.opacity(0.08))
+                .fill(Color.dsSurfaceSecondary)
         )
+        .dsShadow(.subtle)
     }
 
     // MARK: - Delete

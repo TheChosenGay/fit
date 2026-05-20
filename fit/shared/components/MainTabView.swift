@@ -52,6 +52,14 @@ struct MainTabView: View {
                 Text("我的")
             }
         }
+        .onAppear {
+            let appearance = UITabBarAppearance()
+            appearance.configureWithTransparentBackground()
+            appearance.backgroundColor = UIColor(Color.dsBackgroundSecondary)
+            appearance.shadowColor = UIColor.black.withAlphaComponent(0.3)
+            UITabBar.appearance().standardAppearance = appearance
+            UITabBar.appearance().scrollEdgeAppearance = appearance
+        }
         .overlay(alignment: .topTrailing) {
             DebugModelButton(selectedModel: $selectedModel)
                 .padding(.top, DSSpacing.huge)
