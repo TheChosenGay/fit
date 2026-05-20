@@ -5,7 +5,7 @@ import SwiftData
 @available(iOS 17.0, *)
 protocol HealthDataService {
     func fetchDailyHealth(for date: Date, context: ModelContext) throws -> DailyHealthData?
-    func saveDailyHealth(_ data: DailyHealthData, context: ModelContext) throws
+    func saveHealthData(_ data: HealthKitDayData, context: ModelContext) throws
     func fetchHealthRange(from start: Date, to end: Date, context: ModelContext) throws -> [DailyHealthData]
 }
 
@@ -18,23 +18,50 @@ struct DefaultHealthDataService: HealthDataService {
         return try context.fetch(descriptor).first
     }
 
-    func saveDailyHealth(_ data: DailyHealthData, context: ModelContext) throws {
+    func saveHealthData(_ data: HealthKitDayData, context: ModelContext) throws {
         let dayStart = Calendar.current.startOfDay(for: data.date)
         var descriptor = FetchDescriptor<DailyHealthData>()
         descriptor.predicate = #Predicate { $0.date == dayStart }
+        let record: DailyHealthData
         if let existing = try context.fetch(descriptor).first {
-            existing.steps = data.steps
-            existing.activeEnergyKcal = data.activeEnergyKcal
-            existing.heartRateAvg = data.heartRateAvg
-            existing.heartRateMin = data.heartRateMin
-            existing.heartRateMax = data.heartRateMax
-            existing.sleepHours = data.sleepHours
-            existing.sleepQuality = data.sleepQuality
-            existing.restingHeartRate = data.restingHeartRate
-            existing.updatedAt = Date()
+            record = existing
         } else {
-            context.insert(data)
+            record = DailyHealthData(date: data.date)
+            context.insert(record)
         }
+
+        // Activity
+        record.steps = data.steps
+        record.activeEnergyKcal = data.activeEnergyKcal
+        record.basalEnergyKcal = data.basalEnergyKcal
+        record.exerciseMinutes = data.exerciseMinutes
+        record.standMinutes = data.standMinutes
+        record.distanceWalkedKm = data.distanceWalkedKm
+        record.flightsClimbed = data.flightsClimbed
+
+        // Heart Rate
+        record.heartRateAvg = data.heartRateAvg
+        record.heartRateMin = data.heartRateMin
+        record.heartRateMax = data.heartRateMax
+        record.restingHeartRate = data.restingHeartRate
+        record.heartRateVariability = data.heartRateVariability
+        record.walkingHeartRateAvg = data.walkingHeartRateAvg
+
+        // Sleep
+        record.sleepHours = data.sleepHours
+        record.sleepStartTime = data.sleepStartTime
+        record.sleepEndTime = data.sleepEndTime
+        record.deepSleepHours = data.deepSleepHours
+        record.remSleepHours = data.remSleepHours
+        record.coreSleepHours = data.coreSleepHours
+        record.sleepInterruptions = data.sleepInterruptions
+
+        // Other
+        record.respiratoryRateAvg = data.respiratoryRateAvg
+        record.bloodOxygenAvg = data.bloodOxygenAvg
+
+        record.updatedAt = Date()
+
         try context.save()
     }
 

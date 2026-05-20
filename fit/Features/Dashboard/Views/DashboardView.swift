@@ -47,6 +47,7 @@ struct DashboardView: View {
         .background(Color.dsBackground.ignoresSafeArea())
         .task {
             await loadHealthData()
+            await backfillRecentWeek()
         }
     }
 
@@ -72,8 +73,15 @@ struct DashboardView: View {
                     healthMetric(icon: "flame.fill", value: String(format: "%.0f", data.activeEnergyKcal), unit: "kcal", color: .orange)
                     healthMetric(icon: "heart.fill", value: data.heartRateAvg.map { String(format: "%.0f", $0) } ?? "--", unit: "bpm", color: .red)
                     healthMetric(icon: "bed.double.fill", value: data.sleepHours.map { String(format: "%.1f", $0) } ?? "--", unit: "时", color: .purple)
+                    healthMetric(icon: "ruler.fill", value: data.distanceWalkedKm.map { String(format: "%.1f", $0) } ?? "--", unit: "公里", color: .green)
                 }
-            } else {
+                HStack(spacing: DSSpacing.lg) {
+                    healthMetric(icon: "figure.run", value: "\(data.exerciseMinutes)", unit: "练分", color: .cyan)
+                    healthMetric(icon: "figure.stand", value: "\(data.standMinutes)", unit: "站分", color: .blue)
+                    healthMetric(icon: "waveform.path.ecg", value: data.heartRateVariability.map { String(format: "%.0f", $0) } ?? "--", unit: "HRV", color: .pink)
+                    healthMetric(icon: "lungs.fill", value: data.respiratoryRateAvg.map { String(format: "%.0f", $0) } ?? "--", unit: "呼吸", color: .teal)
+                    healthMetric(icon: "drop.fill", value: data.bloodOxygenAvg.map { String(format: "%.0f", $0) } ?? "--", unit: "%", color: .red)
+                }
                 Text(isHealthAuthorized ? "正在加载..." : "授权 HealthKit 获取健康数据")
                     .dsTextStyle(.caption1)
                     .foregroundColor(.white.opacity(0.5))
@@ -167,6 +175,24 @@ struct DashboardView: View {
         .padding(.horizontal, DSSpacing.lg)
     }
 
+    private func backfillRecentWeek() async {
+        guard isHealthAuthorized else { return }
+        let endDate = Calendar.current.startOfDay(for: Date())
+        guard let startDate = Calendar.current.date(byAdding: .day, value: -6, to: endDate) else { return }
+
+        do {
+            let existing = try healthDataService.fetchHealthRange(from: startDate, to: endDate, context: modelContext)
+            let existingDates = Set(existing.map(\.date))
+
+            let allData = try await healthKitService.fetchDataRange(from: startDate, to: endDate)
+            for data in allData where !existingDates.contains(data.date) {
+                try healthDataService.saveHealthData(data, context: modelContext)
+            }
+        } catch {
+            // Silently skip — HealthKit may not have data for some days
+        }
+    }
+
     // MARK: - Helpers
 
     private var profile: UserProfile? {
@@ -197,13 +223,7 @@ struct DashboardView: View {
             if isHealthAuthorized {
                 let data = try await healthKitService.fetchDailyData(for: Date())
                 healthData = data
-                let dailyHealth = DailyHealthData(date: data.date)
-                dailyHealth.steps = data.steps
-                dailyHealth.activeEnergyKcal = data.activeEnergyKcal
-                dailyHealth.heartRateAvg = data.heartRateAvg
-                dailyHealth.restingHeartRate = data.restingHeartRate
-                dailyHealth.sleepHours = data.sleepHours
-                try healthDataService.saveDailyHealth(dailyHealth, context: modelContext)
+                try healthDataService.saveHealthData(data, context: modelContext)
             }
         } catch {
             // HealthKit unavailable or denied — show empty state

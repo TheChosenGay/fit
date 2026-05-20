@@ -30,3 +30,19 @@ struct CoachReport: Codable {
     let improvements: [String]
     let recommendations: [String]
 }
+
+// MARK: - Pre-workout advice
+
+struct WorkoutAdvice: Codable {
+    let shouldTrain: Bool
+    let reason: String
+    let suggestedFocus: String?
+    let warnings: [String]?
+
+    enum CodingKeys: String, CodingKey {
+        case shouldTrain = "should_train"
+        case reason
+        case suggestedFocus = "suggested_focus"
+        case warnings
+    }
+}

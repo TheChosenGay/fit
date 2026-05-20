@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import SwiftData
 
 // MARK: - Real-time AI Coach View
 
@@ -7,11 +8,23 @@ import AVFoundation
 struct RealtimeCoachView: View {
     let exercise: SupportedExercise
 
+    @Environment(\.modelContext) private var modelContext
+
     @StateObject private var cameraVM = RealTimeCameraViewModel()
     @StateObject private var session = RealtimeCoachSession()
     @State private var isActive = false
     @State private var showExercisePicker = true
     @State private var audioCapture = AudioCapture()
+
+    // Pre-workout advice
+    @State private var workoutAdvice: WorkoutAdvice?
+    @State private var isLoadingAdvice = false
+    @State private var showAdvice = false
+
+    private let healthDataService = DefaultHealthDataService()
+    private let workoutDataService = DefaultWorkoutDataService()
+    private let dietDataService = DefaultDietDataService()
+    private let aiCoachService = DeepSeekAICoachService.shared
 
     private var systemPrompt: String {
         """
@@ -85,7 +98,7 @@ struct RealtimeCoachView: View {
                     Button(action: toggleSession) {
                         HStack(spacing: 6) {
                             Image(systemName: isActive ? "stop.fill" : "mic.fill")
-                            Text(isActive ? "结束" : "开始教练")
+                            Text(isActive ? "结束" : isLoadingAdvice ? "分析中..." : "开始教练")
                         }
                         .fontWeight(.semibold)
                         .foregroundColor(.white)
@@ -94,6 +107,7 @@ struct RealtimeCoachView: View {
                         .background(isActive ? Color.red : Color.green)
                         .cornerRadius(24)
                     }
+                    .disabled(isLoadingAdvice)
 
                     HStack(spacing: 4) {
                         Circle()
@@ -110,7 +124,7 @@ struct RealtimeCoachView: View {
                 .padding(.bottom, 48)
             }
 
-            // Exercise picker overlay (before starting)
+            // Exercise picker overlay
             if showExercisePicker {
                 Color.black.opacity(0.4).ignoresSafeArea()
 
@@ -128,11 +142,104 @@ struct RealtimeCoachView: View {
                     .padding(.horizontal)
                     .disabled(true)
 
-                    Text("开始后 AI 教练将实时指导你的动作")
+                    Text("AI 教练将根据你的近期状态给出训练建议")
                         .font(.caption)
                         .foregroundColor(.white.opacity(0.6))
                 }
                 .padding(.top, 60)
+            }
+
+            // Pre-workout advice overlay
+            if showAdvice, let advice = workoutAdvice {
+                Color.black.opacity(0.6).ignoresSafeArea()
+
+                VStack(spacing: 20) {
+                    // Header
+                    Image(systemName: advice.shouldTrain ? "figure.strengthtraining.functional" : "bed.double.fill")
+                        .font(.system(size: 48))
+                        .foregroundColor(advice.shouldTrain ? .green : .orange)
+
+                    Text(advice.shouldTrain ? "今天适合训练" : "建议休息")
+                        .font(.title2.weight(.bold))
+                        .foregroundColor(.white)
+
+                    // Reason
+                    Text(advice.reason)
+                        .font(.body)
+                        .foregroundColor(.white.opacity(0.85))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+
+                    // Suggested focus
+                    if let focus = advice.suggestedFocus, !focus.isEmpty {
+                        VStack(spacing: 6) {
+                            Text("建议重点")
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.5))
+                            Text(focus)
+                                .font(.headline)
+                                .foregroundColor(.dsPrimary)
+                        }
+                        .padding(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.white.opacity(0.08))
+                        )
+                    }
+
+                    // Warnings
+                    if let warnings = advice.warnings, !warnings.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            ForEach(warnings, id: \.self) { warning in
+                                HStack(spacing: 8) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundColor(.orange)
+                                        .font(.caption)
+                                    Text(warning)
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.8))
+                                }
+                            }
+                        }
+                        .padding(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.orange.opacity(0.15))
+                        )
+                    }
+
+                    // Actions
+                    HStack(spacing: 16) {
+                        Button("取消") {
+                            showAdvice = false
+                            showExercisePicker = true
+                        }
+                        .foregroundColor(.white.opacity(0.6))
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+
+                        Button(advice.shouldTrain ? "开始训练" : "仍要训练") {
+                            showAdvice = false
+                            beginSession()
+                        }
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 32)
+                        .padding(.vertical, 12)
+                        .background(advice.shouldTrain ? Color.green : Color.orange)
+                        .cornerRadius(24)
+                    }
+                }
+                .padding(24)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color.black.opacity(0.8))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20)
+                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                        )
+                )
+                .padding(32)
             }
         }
         .onAppear {
@@ -158,12 +265,60 @@ struct RealtimeCoachView: View {
         if isActive {
             stopSession()
         } else {
-            startSession()
+            requestPreWorkoutAdvice()
         }
     }
 
-    private func startSession() {
+    private func requestPreWorkoutAdvice() {
+        isLoadingAdvice = true
         showExercisePicker = false
+
+        Task {
+            do {
+                let advice = try await fetchPreWorkoutAdvice()
+                await MainActor.run {
+                    isLoadingAdvice = false
+                    workoutAdvice = advice
+                    showAdvice = true
+                }
+            } catch {
+                await MainActor.run {
+                    isLoadingAdvice = false
+                    // On error, skip advice and start directly
+                    beginSession()
+                }
+            }
+        }
+    }
+
+    private func fetchPreWorkoutAdvice() async throws -> WorkoutAdvice {
+        let endDate = Date()
+        guard let startDate = Calendar.current.date(byAdding: .day, value: -6, to: Calendar.current.startOfDay(for: endDate)) else {
+            throw AIAnalysisError.invalidJSON
+        }
+
+        // Fetch 7-day data
+        let healthData = (try? healthDataService.fetchHealthRange(from: startDate, to: endDate, context: modelContext)) ?? []
+        let recentWorkouts = (try? workoutDataService.fetchRecentSessions(days: 7, context: modelContext)) ?? []
+        let recentMeals = (try? dietDataService.fetchMealsRange(from: startDate, to: endDate, context: modelContext)) ?? []
+
+        // Fetch profile
+        var fetchDescriptor = FetchDescriptor<UserProfile>()
+        fetchDescriptor.fetchLimit = 1
+        let profile = try? modelContext.fetch(fetchDescriptor).first
+
+        let context = CoachContextBuilder.buildPreWorkoutContext(
+            profile: profile,
+            healthData: healthData,
+            recentWorkouts: recentWorkouts,
+            recentMeals: recentMeals
+        )
+
+        let allExercises = SupportedExercise.allCases.map(\.chineseName)
+        return try await aiCoachService.preWorkoutAdvice(context: context, supportedExercises: allExercises)
+    }
+
+    private func beginSession() {
         cameraVM.startDetection()
         audioCapture.start { buffer in
             session.onAudioBuffer(buffer)
@@ -174,6 +329,7 @@ struct RealtimeCoachView: View {
 
     private func stopSession() {
         isActive = false
+        showExercisePicker = true
         session.endSession()
         cameraVM.stopDetection()
         audioCapture.stop()

@@ -7,7 +7,7 @@ enum CoachContextBuilder {
 
     static func buildDailyContext(
         profile: UserProfile?,
-        healthData: HealthKitDayData?,
+        healthData: DailyHealthData?,
         recentPoses: [PoseAnalysisRecord],
         recentWorkouts: [WorkoutSession],
         todayMeals: [MealRecord],
@@ -26,7 +26,7 @@ enum CoachContextBuilder {
             parts.append(buildProfileSection(profile))
         }
 
-        // HealthKit
+        // Health (from SwiftData DailyHealthData)
         if let health = healthData {
             parts.append(buildHealthSection(health))
         }
@@ -83,7 +83,7 @@ enum CoachContextBuilder {
 
     static func buildWeeklyContext(
         profile: UserProfile?,
-        healthData: [HealthKitDayData],
+        healthData: [DailyHealthData],
         poseHistory: [PoseAnalysisRecord],
         workoutHistory: [WorkoutSession],
         meals: [MealRecord]
@@ -96,9 +96,12 @@ enum CoachContextBuilder {
         }
 
         if !healthData.isEmpty {
-            let avgSteps = healthData.compactMap { $0.steps }.reduce(0, +) / max(healthData.count, 1)
+            let avgSteps = healthData.map(\.steps).reduce(0, +) / max(healthData.count, 1)
             let totalCal = healthData.reduce(0.0) { $0 + $1.activeEnergyKcal }
-            parts.append("本周平均步数：\(avgSteps)/天，总消耗：\(Int(totalCal))千卡")
+            let avgSleep = healthData.compactMap(\.sleepHours).reduce(0.0, +) / Double(max(healthData.compactMap(\.sleepHours).count, 1))
+            let avgHRV = healthData.compactMap(\.heartRateVariability).reduce(0.0, +) / Double(max(healthData.compactMap(\.heartRateVariability).count, 1))
+            let totalExerciseMin = healthData.map(\.exerciseMinutes).reduce(0, +)
+            parts.append("本周平均步数：\(avgSteps)/天，总消耗：\(Int(totalCal))千卡，平均睡眠：\(String(format: "%.1f", avgSleep))小时，平均HRV：\(String(format: "%.0f", avgHRV))ms，锻炼总时长：\(totalExerciseMin)分钟")
         }
 
         if !poseHistory.isEmpty {
@@ -113,6 +116,73 @@ enum CoachContextBuilder {
         }
 
         let userContext = parts.joined(separator: "\n\n")
+
+        return CoachContext(systemPrompt: systemPrompt, userContext: userContext)
+    }
+
+    // MARK: - Pre-workout context
+
+    static func buildPreWorkoutContext(
+        profile: UserProfile?,
+        healthData: [DailyHealthData],
+        recentWorkouts: [WorkoutSession],
+        recentMeals: [MealRecord]
+    ) -> CoachContext {
+        let systemPrompt = "你是一位专业AI健身私教，根据用户近一周数据判断今天是否适合训练。"
+        var parts: [String] = []
+
+        if let profile {
+            parts.append(buildProfileSection(profile))
+        }
+
+        // Last 7 days health summary
+        if !healthData.isEmpty {
+            let avgSleep = healthData.compactMap(\.sleepHours).reduce(0.0, +) / Double(max(healthData.compactMap(\.sleepHours).count, 1))
+            let avgHRV = healthData.compactMap(\.heartRateVariability).reduce(0.0, +) / Double(max(healthData.compactMap(\.heartRateVariability).count, 1))
+            let avgRestHR = healthData.compactMap(\.restingHeartRate).reduce(0.0, +) / Double(max(healthData.compactMap(\.restingHeartRate).count, 1))
+            let avgDeep = healthData.compactMap(\.deepSleepHours).reduce(0.0, +) / Double(max(healthData.compactMap(\.deepSleepHours).count, 1))
+            let totalExercise = healthData.map(\.exerciseMinutes).reduce(0, +)
+
+            let todayHealth = healthData.first { Calendar.current.isDateInToday($0.date) }
+            let todaySleep = todayHealth?.sleepHours
+            let todayHRV = todayHealth?.heartRateVariability
+
+            var healthLines: [String] = [
+                "近7天平均：睡眠 \(String(format: "%.1f", avgSleep))h，深睡 \(String(format: "%.1f", avgDeep))h，HRV \(String(format: "%.0f", avgHRV))ms，静息心率 \(String(format: "%.0f", avgRestHR))bpm",
+                "7天总锻炼：\(totalExercise)分钟",
+            ]
+            if let sleep = todaySleep {
+                healthLines.append("昨晚睡眠：\(String(format: "%.1f", sleep))小时")
+            }
+            if let hrv = todayHRV {
+                healthLines.append("今早HRV：\(String(format: "%.0f", hrv))ms")
+            }
+            parts.append(healthLines.joined(separator: "\n"))
+        }
+
+        // Recent workouts
+        if !recentWorkouts.isEmpty {
+            let last7 = recentWorkouts.filter {
+                Calendar.current.dateComponents([.day], from: $0.date, to: Date()).day ?? 8 <= 7
+            }
+            if !last7.isEmpty {
+                let sessions = last7.sorted(by: { $0.date > $1.date })
+                let history = sessions.map { s in
+                    "\(s.date.formatted(date: .numeric, time: .omitted)): \(s.totalReps)次 评分\(s.averageFormScore ?? 0) \(s.durationSeconds/60)分钟"
+                }.joined(separator: "\n")
+                let consecutiveDays = maxConsecutiveDays(sessions.map(\.date))
+                parts.append("最近7天训练（连续\(consecutiveDays)天）：\n\(history)")
+            }
+        }
+
+        // Recent meals
+        if !recentMeals.isEmpty {
+            let avgCal = recentMeals.map(\.totalCalories).reduce(0, +) / max(recentMeals.count, 1)
+            let avgProtein = recentMeals.map(\.proteinGrams).reduce(0.0, +) / Double(max(recentMeals.count, 1))
+            parts.append("近7天饮食：日均 \(avgCal)千卡，蛋白质 \(String(format: "%.0f", avgProtein))g/天")
+        }
+
+        let userContext = parts.joined(separator: "\n\n---\n\n")
 
         return CoachContext(systemPrompt: systemPrompt, userContext: userContext)
     }
@@ -140,14 +210,67 @@ enum CoachContextBuilder {
         """
     }
 
-    private static func buildHealthSection(_ h: HealthKitDayData) -> String {
-        """
-        今日健康数据：
-        - 步数：\(h.steps) 步
-        - 活动能量：\(String(format: "%.0f", h.activeEnergyKcal)) 千卡
-        - 平均心率：\(h.heartRateAvg.map { String(format: "%.0f", $0) } ?? "无数据") bpm
-        - 睡眠：\(h.sleepHours.map { String(format: "%.1f", $0) } ?? "无数据") 小时
-        """
+    private static func buildHealthSection(_ h: DailyHealthData) -> String {
+        var lines: [String] = []
+
+        // Activity
+        lines.append("活动：步数 \(h.steps)，活动能量 \(String(format: "%.0f", h.activeEnergyKcal))千卡")
+        if let basal = h.basalEnergyKcal {
+            lines.append("基础代谢 \(String(format: "%.0f", basal))千卡")
+        }
+        if h.exerciseMinutes > 0 {
+            lines.append("锻炼 \(h.exerciseMinutes)分钟，站立 \(h.standMinutes)分钟")
+        }
+        if let dist = h.distanceWalkedKm, dist > 0 {
+            lines.append("步行距离 \(String(format: "%.1f", dist))公里")
+        }
+
+        // Heart Rate
+        var hrParts: [String] = []
+        if let avg = h.heartRateAvg { hrParts.append("平均心率 \(String(format: "%.0f", avg))bpm") }
+        if let min = h.heartRateMin { hrParts.append("最低 \(String(format: "%.0f", min))bpm") }
+        if let max = h.heartRateMax { hrParts.append("最高 \(String(format: "%.0f", max))bpm") }
+        if let rest = h.restingHeartRate { hrParts.append("静息心率 \(String(format: "%.0f", rest))bpm") }
+        if !hrParts.isEmpty { lines.append("心率：" + hrParts.joined(separator: "，")) }
+
+        if let hrv = h.heartRateVariability {
+            lines.append("HRV: \(String(format: "%.0f", hrv))ms（\(hrvStatus(hrv))）")
+        }
+        if let walkingHR = h.walkingHeartRateAvg {
+            lines.append("步行平均心率：\(String(format: "%.0f", walkingHR))bpm")
+        }
+
+        // Sleep
+        if let sleepHours = h.sleepHours {
+            var sleepStr = "睡眠：总计 \(String(format: "%.1f", sleepHours))小时"
+            var stageParts: [String] = []
+            if let deep = h.deepSleepHours, deep > 0 { stageParts.append("深睡 \(String(format: "%.1f", deep))h") }
+            if let rem = h.remSleepHours, rem > 0 { stageParts.append("REM \(String(format: "%.1f", rem))h") }
+            if let core = h.coreSleepHours, core > 0 { stageParts.append("核心 \(String(format: "%.1f", core))h") }
+            if !stageParts.isEmpty { sleepStr += "（" + stageParts.joined(separator: "，") + "）" }
+            if let start = h.sleepStartTime {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "HH:mm"
+                sleepStr += "，入睡 \(formatter.string(from: start))"
+            }
+            if let end = h.sleepEndTime {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "HH:mm"
+                sleepStr += "，起床 \(formatter.string(from: end))"
+            }
+            if h.sleepInterruptions > 0 {
+                sleepStr += "，中断 \(h.sleepInterruptions) 次"
+            }
+            lines.append(sleepStr)
+        }
+
+        // Other vitals
+        var vitals: [String] = []
+        if let resp = h.respiratoryRateAvg { vitals.append("呼吸频率 \(String(format: "%.1f", resp))次/分") }
+        if let spo2 = h.bloodOxygenAvg { vitals.append("血氧 \(String(format: "%.0f", spo2))%") }
+        if !vitals.isEmpty { lines.append("其他：" + vitals.joined(separator: "，")) }
+
+        return lines.joined(separator: "\n")
     }
 
     private static func buildPoseSection(_ poses: [PoseAnalysisRecord]) -> String {
@@ -188,6 +311,8 @@ enum CoachContextBuilder {
         return text
     }
 
+    // MARK: - Labels
+
     private static func fitnessGoalLabel(_ goal: String) -> String {
         switch goal {
         case "posture_correction": return "体态矫正"
@@ -207,5 +332,30 @@ enum CoachContextBuilder {
         case "very_active": return "非常活跃"
         default: return level
         }
+    }
+
+    private static func hrvStatus(_ hrv: Double) -> String {
+        switch hrv {
+        case 0..<30: return "偏低，恢复不足"
+        case 30..<50: return "一般"
+        case 50..<80: return "良好"
+        default: return "优秀"
+        }
+    }
+
+    private static func maxConsecutiveDays(_ dates: [Date]) -> Int {
+        let sorted = dates.map { Calendar.current.startOfDay(for: $0) }.sorted()
+        guard !sorted.isEmpty else { return 0 }
+        var maxRun = 1
+        var current = 1
+        for i in 1..<sorted.count {
+            if Calendar.current.dateComponents([.day], from: sorted[i-1], to: sorted[i]).day == 1 {
+                current += 1
+                maxRun = max(maxRun, current)
+            } else {
+                current = 1
+            }
+        }
+        return maxRun
     }
 }

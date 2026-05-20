@@ -6,6 +6,7 @@ import SwiftData
 protocol DietDataService {
     func saveMeal(_ meal: MealRecord, context: ModelContext) throws
     func fetchMeals(for date: Date, context: ModelContext) throws -> [MealRecord]
+    func fetchMealsRange(from start: Date, to end: Date, context: ModelContext) throws -> [MealRecord]
     func fetchDailyNutrition(for date: Date, context: ModelContext) throws -> NutritionSummary
 }
 
@@ -26,6 +27,14 @@ struct DefaultDietDataService: DietDataService {
     func fetchMeals(for date: Date, context: ModelContext) throws -> [MealRecord] {
         let dayStart = Calendar.current.startOfDay(for: date)
         let dayEnd = Calendar.current.date(byAdding: .day, value: 1, to: dayStart)!
+        var descriptor = FetchDescriptor<MealRecord>(sortBy: [SortDescriptor(\.createdAt, order: .forward)])
+        descriptor.predicate = #Predicate { $0.date >= dayStart && $0.date < dayEnd }
+        return try context.fetch(descriptor)
+    }
+
+    func fetchMealsRange(from start: Date, to end: Date, context: ModelContext) throws -> [MealRecord] {
+        let dayStart = Calendar.current.startOfDay(for: start)
+        let dayEnd = Calendar.current.startOfDay(for: end)
         var descriptor = FetchDescriptor<MealRecord>(sortBy: [SortDescriptor(\.createdAt, order: .forward)])
         descriptor.predicate = #Predicate { $0.date >= dayStart && $0.date < dayEnd }
         return try context.fetch(descriptor)

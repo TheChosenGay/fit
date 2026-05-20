@@ -7,6 +7,7 @@ protocol AICoachService {
     func dailyBriefing(context: CoachContext) async throws -> CoachBriefing
     func realTimeFeedback(context: CoachContext, exerciseName: String, formScore: Int, recentReps: Int) async throws -> String
     func weeklyReport(context: CoachContext, poseHistory: [PoseAnalysisRecord], workoutHistory: [WorkoutSession]) async throws -> CoachReport
+    func preWorkoutAdvice(context: CoachContext, supportedExercises: [String]) async throws -> WorkoutAdvice
 }
 
 // MARK: - DeepSeek implementation
@@ -125,6 +126,43 @@ final class DeepSeekAICoachService: AICoachService {
         }
 
         return try JSONDecoder().decode(CoachReport.self, from: jsonData)
+    }
+
+    // MARK: - Pre-workout advice
+
+    func preWorkoutAdvice(context: CoachContext, supportedExercises: [String]) async throws -> WorkoutAdvice {
+        let systemPrompt = """
+        你是一位专业的AI健身私教。用户即将开始训练，请根据TA最近一周的健康数据、训练记录和饮食情况，判断今天是否适合训练，并给出建议。
+
+        评估要点：
+        1. 睡眠不足（<6小时）、HRV显著偏低（<30ms）、静息心率异常偏高 → 建议休息
+        2. 连续训练天数过多、最近训练强度太大 → 建议轻量训练或休息
+        3. 睡眠充足、HRV正常、最近训练间隔合理 → 鼓励训练
+        4. 饮食中蛋白质不足 → 提醒补充
+
+        返回严格JSON（不要markdown）：
+        {"should_train":true/false,"reason":"判断依据，2-3句话","suggested_focus":"今天建议重点训练的动作/肌群","warnings":["警告1","警告2"]}
+
+        若无特殊风险，warnings 可省略。suggested_focus 从以下可选动作中挑选：\(supportedExercises.joined(separator: "、"))
+        """
+
+        let request = FitAIRequest(
+            model: "deepseek-chat",
+            maxTokens: 512,
+            messages: [
+                .init(role: "system", content: systemPrompt),
+                .init(role: "user", content: context.userContext),
+            ]
+        )
+
+        let text = try await aiService.query(req: request)
+
+        let jsonText = stripMarkdownCodeBlock(text)
+        guard let jsonData = jsonText.data(using: .utf8) else {
+            throw AIAnalysisError.invalidJSON
+        }
+
+        return try JSONDecoder().decode(WorkoutAdvice.self, from: jsonData)
     }
 
     // MARK: - Helpers
