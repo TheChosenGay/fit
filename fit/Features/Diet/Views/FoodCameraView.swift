@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 import ARKit
 import SwiftData
 
@@ -154,6 +155,7 @@ struct FoodCameraView: View {
 
     // MARK: - Analyzing overlay
 
+    @ViewBuilder
     private var analyzingOverlay: some View {
         Color.black.opacity(0.5).ignoresSafeArea()
         VStack(spacing: DSSpacing.md) {

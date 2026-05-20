@@ -131,7 +131,7 @@ final class FoodVolumeEstimator {
 }
 
 // MARK: - Spatial matching helper
-
+@available(iOS 17.0, *)
 extension FoodVolumeEstimator {
 
     /// Match LiDAR instances to AI food items by spatial position.

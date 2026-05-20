@@ -6,7 +6,7 @@ extension CMSampleBuffer: @unchecked @retroactive Sendable {}
 
 // MARK: - BodyJoint (combined 2D + 3D)
 
-struct BodyJoint {
+struct BodyJoint: Equatable {
     let joint: String
     let location2D: CGPoint          // normalized 0-1 (from 2D detection, for screen overlay)
     let position3D: simd_float3?     // 3D world position in meters (from 3D detection, for analysis)

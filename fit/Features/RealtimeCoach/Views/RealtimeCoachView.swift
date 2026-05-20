@@ -13,7 +13,7 @@ struct RealtimeCoachView: View {
     @State private var showExercisePicker = true
     @State private var audioCapture = AudioCapture()
 
-    private let systemPrompt: String = {
+    private var systemPrompt: String {
         """
         你是一位专业的实时健身教练。你会收到用户运动时的姿态数据和语音。
 
@@ -27,7 +27,7 @@ struct RealtimeCoachView: View {
 
         当前运动：\(exercise.chineseName)
         """
-    }()
+    }
 
     var body: some View {
         ZStack {
