@@ -59,12 +59,16 @@ final class RealTimeCameraViewModel: ObservableObject {
         }
         frameProcessor.onPoseDetected = { [weak self] joints in
             let names = joints.map(\.joint).sorted()
-            self?.jointNames = names
-            self?.detectedJoints = joints
+            Task { @MainActor [weak self] in
+                self?.jointNames = names
+                self?.detectedJoints = joints
+            }
         }
         frameProcessor.onPoseLost = { [weak self] in
-            self?.detectedJoints = nil
-            self?.jointNames = []
+            Task { @MainActor [weak self] in
+                self?.detectedJoints = nil
+                self?.jointNames = []
+            }
         }
         isDetecting = true
     }

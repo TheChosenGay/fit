@@ -401,7 +401,9 @@ struct RealtimeCoachView: View {
 
         cameraVM.startDetection()
         audioCapture.start { buffer in
-            session.onAudioBuffer(buffer)
+            Task { @MainActor in
+                session.onAudioBuffer(buffer)
+            }
         }
         session.startSession(exercise: exercise, systemPrompt: systemPrompt)
         isActive = true

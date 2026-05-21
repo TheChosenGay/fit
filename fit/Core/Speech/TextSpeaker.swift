@@ -8,6 +8,7 @@ final class TextSpeaker: NSObject, ObservableObject {
     private let synthesizer = AVSpeechSynthesizer()
     private var onFinish: (() -> Void)?
     @Published var isSpeaking = false
+    private var generation = 0
 
     override init() {
         super.init()
@@ -15,6 +16,7 @@ final class TextSpeaker: NSObject, ObservableObject {
     }
 
     func stopSpeaking() {
+        generation += 1
         guard synthesizer.isSpeaking else { return }
         synthesizer.stopSpeaking(at: .immediate)
         isSpeaking = false
@@ -26,10 +28,14 @@ final class TextSpeaker: NSObject, ObservableObject {
 extension TextSpeaker: FitTextToSpeechService {
 
     func textToSpeech(_ text: String) async {
+        let gen = generation
+
         // Wait for any in-progress utterance to finish
         while isSpeaking {
             try? await Task.sleep(nanoseconds: 50_000_000)
         }
+        // Bail if stopSpeaking() was called while waiting
+        guard generation == gen else { return }
 
         let session = AVAudioSession.sharedInstance()
         if session.category != .playAndRecord {
@@ -42,6 +48,11 @@ extension TextSpeaker: FitTextToSpeechService {
         utterance.rate = 0.5
 
         await withCheckedContinuation { c in
+            // Check again before starting — stopSpeaking() may have fired
+            guard generation == gen else {
+                c.resume()
+                return
+            }
             isSpeaking = true
             onFinish = {
                 c.resume()

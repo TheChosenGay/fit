@@ -55,6 +55,7 @@ final class RealtimeCoachSession: ObservableObject {
     private var lastPoseTime: Date = .distantPast
     private var lastPersonAbsentEnqueue: Date = .distantPast
     private let personAbsenceInterval: TimeInterval = 8.0
+    private var streamGeneration = 0
 
     // MARK: Init
 
@@ -95,6 +96,7 @@ final class RealtimeCoachSession: ObservableObject {
     }
 
     func endSession() {
+        streamGeneration += 1
         triggerCheckTimer?.invalidate()
         triggerCheckTimer = nil
         currentStreamTask?.cancel()
@@ -119,6 +121,7 @@ final class RealtimeCoachSession: ObservableObject {
     }
 
     func onAudioBuffer(_ buffer: CMSampleBuffer) {
+        guard CMSampleBufferGetNumSamples(buffer) > 0 else { return }
         speechRecognizer.appendAudio(buffer)
     }
 
@@ -165,6 +168,8 @@ final class RealtimeCoachSession: ObservableObject {
 
         sentenceBuffer = ""
         currentAIText = ""
+        streamGeneration += 1
+        let gen = streamGeneration
 
         currentStreamTask = Task { [weak self] in
             guard let self else { return }
@@ -196,11 +201,15 @@ final class RealtimeCoachSession: ObservableObject {
                     self.conversationBubbles.append(ChatBubble(role: .ai, text: aiText))
                 }
                 self.currentAIText = ""
-                self.sessionState = .idle
 
             } catch is CancellationError {
-                self.sessionState = .idle
+                // Fall through to generation check
             } catch {
+                // Fall through to generation check
+            }
+
+            // Only update state if this is still the current stream
+            if gen == self.streamGeneration {
                 self.sessionState = .idle
             }
         }
@@ -221,6 +230,7 @@ final class RealtimeCoachSession: ObservableObject {
     }
 
     private func interruptForUser(_ text: String) {
+        streamGeneration += 1
         textSpeaker.stopSpeaking()
         currentStreamTask?.cancel()
         streamingAI.cancel()
